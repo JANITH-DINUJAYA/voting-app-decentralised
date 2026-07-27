@@ -12,7 +12,7 @@ export class Blockchain {
   public contracts: Map<string, ElectionContract> = new Map();
   public nonces: Map<string, number> = new Map();
   public verifiedAddresses: Set<string> = new Set(); // System-wide registered voter accounts
-  public adminAddress: string = '0xe513658465d6997d28be6460851b77dc703bf13a';
+  public adminAddress: string = '0xff3b47f3e2cd767053ad26ec01860cdcb32ec43d';
   public voterRegistry: Map<string, {
     name: string;
     email: string;
