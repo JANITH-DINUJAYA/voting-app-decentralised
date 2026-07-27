@@ -1,6 +1,5 @@
 import { App } from '../main';
 import { Transaction } from '../blockchain/Transaction';
-import type { Candidate } from '../blockchain/SmartContract';
 
 export class AdminPanel {
   private app: App;
@@ -12,9 +11,8 @@ export class AdminPanel {
   private typeSelect!: HTMLSelectElement;
   private whitelistGroup!: HTMLElement;
   private whitelistInput!: HTMLTextAreaElement;
-  private candidatesContainer!: HTMLElement;
-  private btnAddCandidate!: HTMLButtonElement;
   private btnDeployCampaign!: HTMLButtonElement;
+  private electionsList!: HTMLElement;
 
   constructor(app: App) {
     this.app = app;
@@ -29,90 +27,42 @@ export class AdminPanel {
     this.typeSelect = document.getElementById('campaign-type') as HTMLSelectElement;
     this.whitelistGroup = document.getElementById('whitelist-input-group')!;
     this.whitelistInput = document.getElementById('campaign-whitelist') as HTMLTextAreaElement;
-    this.candidatesContainer = document.getElementById('candidates-input-container')!;
-    this.btnAddCandidate = document.getElementById('btn-add-candidate-input') as HTMLButtonElement;
     this.btnDeployCampaign = document.getElementById('btn-deploy-campaign') as HTMLButtonElement;
+    this.electionsList = document.getElementById('admin-elections-list')!;
   }
 
   private initEvents() {
-    this.typeSelect.addEventListener('change', () => this.handleTypeSelectChange());
-    this.btnAddCandidate.addEventListener('click', () => this.addCandidateInputRow());
-    this.btnDeployCampaign.addEventListener('click', () => this.deployElectionCampaign());
-    
-    // Add delete listeners to initial candidate input trash buttons
-    this.candidatesContainer.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const removeBtn = target.closest('.btn-remove-candidate');
-      if (removeBtn) {
-        const row = removeBtn.closest('.candidate-input-row');
-        if (row) {
-          row.remove();
-          this.toggleCandidateDeleteButtons();
-        }
-      }
-    });
+    if (this.typeSelect) {
+      this.typeSelect.addEventListener('change', () => this.handleTypeSelectChange());
+    }
+    if (this.btnDeployCampaign) {
+      this.btnDeployCampaign.addEventListener('click', () => this.deployElectionCampaign());
+    }
   }
 
-  /**
-   * Toggle visibility of the whitelist input field
-   */
   private handleTypeSelectChange() {
     const isPrivate = this.typeSelect.value === 'private';
-    this.whitelistGroup.style.display = isPrivate ? 'flex' : 'none';
+    if (this.whitelistGroup) {
+      this.whitelistGroup.style.display = isPrivate ? 'flex' : 'none';
+    }
   }
 
   /**
-   * Adds an input row for registering candidate name & bio manifesto
-   */
-  private addCandidateInputRow() {
-    const row = document.createElement('div');
-    row.className = 'form-row candidate-input-row';
-    row.style.gridTemplateColumns = '1fr 2fr auto';
-    row.style.alignItems = 'center';
-
-    row.innerHTML = `
-      <input type="text" class="cand-input-name" placeholder="Candidate Name" />
-      <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" />
-      <button class="btn-icon btn-remove-candidate" title="Delete Candidate"><i class="fa-solid fa-trash-can"></i></button>
-    `;
-
-    this.candidatesContainer.appendChild(row);
-    this.toggleCandidateDeleteButtons();
-  }
-
-  /**
-   * Enforces that an election has at least 2 candidates
-   */
-  private toggleCandidateDeleteButtons() {
-    const rows = this.candidatesContainer.querySelectorAll('.candidate-input-row');
-    const deleteButtons = this.candidatesContainer.querySelectorAll('.btn-remove-candidate');
-    
-    deleteButtons.forEach(btn => {
-      const button = btn as HTMLButtonElement;
-      button.disabled = rows.length <= 2;
-    });
-  }
-
-  /**
-   * Signs and deploys a DEPLOY_ELECTION transaction to the ledger
+   * Deploys a new election in PRE_REGISTRATION phase
    */
   private async deployElectionCampaign() {
-    // 1. Authorization check
     if (!this.app.wallet) {
-      this.app.showNotification('Deploy Rejected: You must create/import a wallet first.', 'error');
+      this.app.showNotification('Deploy Rejected: You must connect a wallet first.', 'error');
       return;
     }
 
     const wallet = this.app.wallet;
-
-    // Check if wallet is admin
     const isVerifierAdmin = wallet.address.toLowerCase() === this.app.blockchain.adminAddress.toLowerCase();
     if (!isVerifierAdmin) {
-      this.app.showNotification('Deploy Rejected: Only the designated Admin Verifier can deploy elections.', 'error');
+      this.app.showNotification('Deploy Rejected: Only the Admin Verifier can deploy elections.', 'error');
       return;
     }
 
-    // 2. Validate basic inputs
     const title = this.titleInput.value.trim();
     const desc = this.descInput.value.trim();
     const durationMin = parseInt(this.durationInput.value);
@@ -124,75 +74,36 @@ export class AdminPanel {
     }
 
     if (isNaN(durationMin) || durationMin <= 0) {
-      this.app.showNotification('Deploy Rejected: Please input a valid duration in minutes.', 'error');
+      this.app.showNotification('Deploy Rejected: Please input a valid duration.', 'error');
       return;
     }
 
-    // Parse candidates
-    const candidateRows = this.candidatesContainer.querySelectorAll('.candidate-input-row');
-    const candidates: Candidate[] = [];
-    let hasEmptyName = false;
-
-    candidateRows.forEach(row => {
-      const nameInput = row.querySelector('.cand-input-name') as HTMLInputElement;
-      const bioInput = row.querySelector('.cand-input-bio') as HTMLInputElement;
-      
-      const name = nameInput.value.trim();
-      const bio = bioInput.value.trim();
-
-      if (!name) {
-        hasEmptyName = true;
-      } else {
-        candidates.push({ name, bio });
-      }
-    });
-
-    if (hasEmptyName) {
-      this.app.showNotification('Deploy Rejected: All candidates must have a name.', 'error');
-      return;
-    }
-
-    if (candidates.length < 2) {
-      this.app.showNotification('Deploy Rejected: An election requires at least 2 candidates.', 'error');
-      return;
-    }
-
-    // Check for duplicate candidate names
-    const namesSet = new Set(candidates.map(c => c.name));
-    if (namesSet.size !== candidates.length) {
-      this.app.showNotification('Deploy Rejected: Candidate names must be unique.', 'error');
-      return;
-    }
-
-    // Parse Whitelist if private
     let whitelist: string[] = [];
     if (isPrivate) {
       const text = this.whitelistInput.value.trim();
       whitelist = text.split(/[\n,]+/).map(a => a.trim()).filter(a => a.startsWith('0x'));
-      
       if (whitelist.length === 0) {
-        this.app.showNotification('Deploy Rejected: A whitelist campaign requires at least one valid voter address (0x...).', 'error');
+        this.app.showNotification('Deploy Rejected: Whitelist elections require at least one voter address.', 'error');
         return;
       }
     }
 
     try {
       this.btnDeployCampaign.disabled = true;
-      this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deploying Smart Contract...';
+      this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deploying...';
 
       const currentNonce = this.app.blockchain.getNonce(wallet.address);
-      const deadline = Date.now() + (durationMin * 60 * 1000);
-
-      // Create transaction
+      
+      // Default: empty candidates at deploy. Candidates must apply.
       const tx = new Transaction({
         sender: wallet.address,
-        recipient: '0x0000000000000000000000000000000000000000', // System address for creation
+        recipient: '0x0000000000000000000000000000000000000000',
         type: 'DEPLOY_ELECTION',
         payload: {
           title,
           description: desc,
-          candidates,
-          deadline,
+          candidates: [], // Start empty
+          deadline: Date.now() + (durationMin * 60 * 1000), // Default placeholder, starts counting upon StartElection
           isPrivate,
           whitelist
         },
@@ -201,18 +112,11 @@ export class AdminPanel {
         publicKey: wallet.publicKeyHex,
       });
 
-      // Cryptographically sign
       await tx.signTransaction(wallet);
-
-      // Broadcast to mempool
       await this.app.blockchain.addTransaction(tx);
 
-      // Reset form fields
       this.resetForm();
-
-      this.app.showNotification('Election deployed! Transaction signed and queued in mempool.', 'success');
-      
-      // Auto redirect to Block Explorer to mine
+      this.app.showNotification('Election deployed! Mine block to finalize creation.', 'success');
       this.app.refreshAllViews();
       this.app.router.navigate('#/explorer');
 
@@ -221,13 +125,10 @@ export class AdminPanel {
       this.app.showNotification(`Deployment failed: ${e.message}`, 'error');
     } finally {
       this.btnDeployCampaign.disabled = false;
-      this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-square-plus"></i> Deploy Smart Contract';
+      this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-rocket"></i> Deploy Election Smart Contract';
     }
   }
 
-  /**
-   * Resets form values to defaults
-   */
   private resetForm() {
     this.titleInput.value = '';
     this.descInput.value = '';
@@ -235,40 +136,276 @@ export class AdminPanel {
     this.typeSelect.value = 'public';
     this.whitelistInput.value = '';
     this.whitelistGroup.style.display = 'none';
-
-    // Clear and restore first two default candidates
-    this.candidatesContainer.innerHTML = `
-      <div class="form-row candidate-input-row" style="grid-template-columns: 1fr 2fr auto; align-items: center;">
-        <input type="text" class="cand-input-name" placeholder="Candidate Name" value="Candidate Alpha" />
-        <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" value="Pioneering absolute transparency and open communication." />
-        <button class="btn-icon btn-remove-candidate" disabled><i class="fa-solid fa-trash-can"></i></button>
-      </div>
-      <div class="form-row candidate-input-row" style="grid-template-columns: 1fr 2fr auto; align-items: center;">
-        <input type="text" class="cand-input-name" placeholder="Candidate Name" value="Candidate Beta" />
-        <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" value="Advocating for dynamic updates and streamlined execution rules." />
-        <button class="btn-icon btn-remove-candidate" disabled><i class="fa-solid fa-trash-can"></i></button>
-      </div>
-    `;
-    this.toggleCandidateDeleteButtons();
   }
 
   /**
-   * Admin panel renderer
+   * Admin triggers candidate application approval/rejection
+   */
+  private async processCandidacyApplication(contractAddress: string, candidateAddress: string, approved: boolean, btn: HTMLButtonElement) {
+    if (!this.app.wallet) return;
+
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+      const admin = this.app.wallet;
+      const currentNonce = this.app.blockchain.getNonce(admin.address);
+
+      const tx = new Transaction({
+        sender: admin.address,
+        recipient: contractAddress,
+        type: 'APPROVE_CANDIDACY',
+        payload: {
+          candidateAddress,
+          approved
+        },
+        nonce: currentNonce,
+        timestamp: Date.now(),
+        publicKey: admin.publicKeyHex
+      });
+
+      await tx.signTransaction(admin);
+      await this.app.blockchain.addTransaction(tx);
+
+      this.app.showNotification(
+        approved 
+          ? 'Candidacy application approved! Mine block to commit state.' 
+          : 'Candidacy application rejected! Mine block to commit state.', 
+        'success'
+      );
+
+      this.app.refreshAllViews();
+      this.app.router.navigate('#/explorer');
+    } catch (e: any) {
+      console.error(e);
+      this.app.showNotification(`Action failed: ${e.message}`, 'error');
+      this.render();
+    }
+  }
+
+  /**
+   * Admin triggers election phase start (status: ACTIVE)
+   */
+  private async startElection(contractAddress: string, durationMinutes: number, btn: HTMLButtonElement) {
+    if (!this.app.wallet) return;
+
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Starting...';
+
+      const admin = this.app.wallet;
+      const currentNonce = this.app.blockchain.getNonce(admin.address);
+
+      const tx = new Transaction({
+        sender: admin.address,
+        recipient: contractAddress,
+        type: 'START_ELECTION',
+        payload: {
+          durationMinutes
+        },
+        nonce: currentNonce,
+        timestamp: Date.now(),
+        publicKey: admin.publicKeyHex
+      });
+
+      await tx.signTransaction(admin);
+      await this.app.blockchain.addTransaction(tx);
+
+      this.app.showNotification('Election started! Mine block to open voting phase.', 'success');
+      this.app.refreshAllViews();
+      this.app.router.navigate('#/explorer');
+    } catch (e: any) {
+      console.error(e);
+      this.app.showNotification(`Failed to start election: ${e.message}`, 'error');
+      this.render();
+    }
+  }
+
+  /**
+   * Render deployed elections management panel
    */
   render() {
-    // If wallet not loaded, warn admin
+    // 1. Authorization check
     if (!this.app.wallet) {
       this.btnDeployCampaign.disabled = true;
       this.btnDeployCampaign.textContent = 'Wallet Disconnected';
-    } else {
-      const isVerifierAdmin = this.app.wallet.address.toLowerCase() === this.app.blockchain.adminAddress.toLowerCase();
-      if (!isVerifierAdmin) {
-        this.btnDeployCampaign.disabled = true;
-        this.btnDeployCampaign.textContent = 'Admin Key Required';
-      } else {
-        this.btnDeployCampaign.disabled = false;
-        this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-square-plus"></i> Deploy Smart Contract';
-      }
+      this.electionsList.innerHTML = '<p style="color: var(--color-text-muted); text-align: center; padding: 1rem;">Connect admin wallet to manage elections.</p>';
+      return;
     }
+
+    const isVerifierAdmin = this.app.wallet.address.toLowerCase() === this.app.blockchain.adminAddress.toLowerCase();
+    if (!isVerifierAdmin) {
+      this.btnDeployCampaign.disabled = true;
+      this.btnDeployCampaign.textContent = 'Admin Key Required';
+      this.electionsList.innerHTML = '<p style="color: var(--color-danger); text-align: center; padding: 1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Only the designated verifier admin can view/manage elections.</p>';
+      return;
+    }
+
+    this.btnDeployCampaign.disabled = false;
+    this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-rocket"></i> Deploy Election Smart Contract';
+
+    // 2. Populate elections list
+    this.electionsList.innerHTML = '';
+    const elections = Array.from(this.app.blockchain.contracts.entries());
+
+    if (elections.length === 0) {
+      this.electionsList.innerHTML = `
+        <div style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
+          <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 0.5rem; display: block;"></i>
+          <p>No elections deployed on-chain yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    elections.forEach(([address, contract]) => {
+      const card = document.createElement('div');
+      card.style.background = 'var(--bg-card)';
+      card.style.border = '1px solid var(--border-color)';
+      card.style.padding = '1.25rem';
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
+      card.style.gap = '0.75rem';
+
+      const isEnded = contract.status === 'ENDED' || Date.now() > contract.deadline;
+      const statusLabels: Record<string, string> = {
+        PRE_REGISTRATION: '<span class="status-badge pending"><i class="fa-solid fa-user-plus"></i> Nominations</span>',
+        ACTIVE: '<span class="status-badge verified"><i class="fa-solid fa-circle-play"></i> Active Voting</span>',
+        ENDED: '<span class="status-badge rejected"><i class="fa-solid fa-circle-xmark"></i> Ended</span>'
+      };
+
+      let statusHtml = statusLabels[contract.status] || statusLabels.PRE_REGISTRATION;
+      if (contract.status === 'ACTIVE' && isEnded) {
+        statusHtml = statusLabels.ENDED;
+      }
+
+      let contentHtml = '';
+
+      if (contract.status === 'PRE_REGISTRATION') {
+        const approvedCount = contract.candidates.length;
+
+        contentHtml = `
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <strong style="font-size: 0.8rem; text-transform: uppercase; color: var(--color-text-muted);">Candidacy Applications</strong>
+            
+            <!-- Applicants list -->
+            <div style="display: flex; flex-direction: column; gap: 0.50rem; margin-top: 0.5rem;">
+              ${contract.candidateApplicants.length === 0 ? `
+                <p style="color: var(--color-text-dim); font-size: 0.8rem;">No candidates have applied for nominations yet.</p>
+              ` : contract.candidateApplicants.map(app => `
+                <div style="background: var(--bg-main); padding: 0.75rem; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                  <div>
+                    <strong style="font-size: 0.88rem;">${app.name}</strong>
+                    <span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-text-muted); display: block;">${app.address.substring(0, 16)}...</span>
+                    ${app.bio ? `<p style="font-size: 0.78rem; color: var(--color-text-dim); margin-top: 0.15rem;">"${app.bio}"</p>` : ''}
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    ${app.status === 'PENDING' ? `
+                      <button class="btn btn-ghost btn-sm btn-approve-candidate-app" data-candidate="${app.address}" style="color: var(--color-secondary); border-color: rgba(0, 245, 212, 0.2);"><i class="fa-solid fa-check"></i> Approve</button>
+                      <button class="btn btn-ghost btn-sm btn-reject-candidate-app" data-candidate="${app.address}" style="color: var(--color-danger); border-color: rgba(255, 0, 85, 0.2);"><i class="fa-solid fa-xmark"></i> Reject</button>
+                    ` : `
+                      <span class="status-badge ${app.status === 'APPROVED' ? 'verified' : 'rejected'}" style="font-size: 0.68rem;">${app.status}</span>
+                    `}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Start Election triggers -->
+            <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 0.85rem; gap: 1rem; flex-wrap: wrap;">
+              <span style="font-size: 0.82rem; color: var(--color-text-muted);">
+                Approved Nominees: <strong style="color: var(--color-secondary);">${approvedCount}</strong> (Requires min. 2 to start)
+              </span>
+              <button class="btn btn-secondary btn-sm btn-start-voting-phase" ${approvedCount < 2 ? 'disabled' : ''} style="font-weight: 700;">
+                <i class="fa-solid fa-play"></i> Start Voting Phase
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (contract.status === 'ACTIVE') {
+        const tallies = contract.getTallies();
+        const totalVotes = Array.from(contract.votes.values()).length;
+        const timeRemaining = contract.deadline - Date.now();
+
+        contentHtml = `
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.5rem; color: var(--color-text-muted);">
+              <span>Voting Progress: <strong>${totalVotes} votes cast</strong></span>
+              <span>Time Left: <strong>${timeRemaining > 0 ? Math.round(timeRemaining / 60000) + ' min' : 'Ended'}</strong></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+              ${contract.candidates.map(cand => {
+                const votes = tallies[cand.name] || 0;
+                const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                return `
+                  <div style="font-size: 0.8rem; display: flex; justify-content: space-between;">
+                    <span>${cand.name}</span>
+                    <strong>${votes} vote${votes !== 1 ? 's' : ''} (${percentage}%)</strong>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        const tallies = contract.getTallies();
+        const totalVotes = Array.from(contract.votes.values()).length;
+        contentHtml = `
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 0.4rem;">Election closed with <strong>${totalVotes} total votes</strong>.</p>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+              ${contract.candidates.map(cand => {
+                const votes = tallies[cand.name] || 0;
+                return `
+                  <div style="font-size: 0.8rem; display: flex; justify-content: space-between;">
+                    <span>${cand.name}</span>
+                    <strong>${votes} vote${votes !== 1 ? 's' : ''}</strong>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 700;">${contract.title}</h3>
+            <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--color-secondary);">${address}</span>
+          </div>
+          <div>${statusHtml}</div>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--color-text-muted);">${contract.description}</p>
+        ${contentHtml}
+      `;
+
+      // Event listeners for Approve/Reject buttons
+      card.querySelectorAll('.btn-approve-candidate-app').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const candidateAddr = btn.getAttribute('data-candidate')!;
+          this.processCandidacyApplication(address, candidateAddr, true, btn as HTMLButtonElement);
+        });
+      });
+
+      card.querySelectorAll('.btn-reject-candidate-app').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const candidateAddr = btn.getAttribute('data-candidate')!;
+          this.processCandidacyApplication(address, candidateAddr, false, btn as HTMLButtonElement);
+        });
+      });
+
+      // Event listener for Start Voting phase
+      const startBtn = card.querySelector('.btn-start-voting-phase') as HTMLButtonElement;
+      if (startBtn) {
+        startBtn.addEventListener('click', () => {
+          // Duration is customized during creation, we use duration input value or default value from deploy form
+          const durationVal = parseInt(this.durationInput.value) || 5;
+          this.startElection(address, durationVal, startBtn);
+        });
+      }
+
+      this.electionsList.appendChild(card);
+    });
   }
 }

@@ -376,6 +376,15 @@
               </div>
               <div id="candidate-standings-chart" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;"></div>
             </div>
+
+            <!-- Apply for Upcoming Elections Card -->
+            <div class="card" id="candidate-apply-elections-card" style="display: none;">
+              <h2 class="card-title"><i class="fa-solid fa-square-plus"></i> Open Election Nominations</h2>
+              <p class="card-subtitle">Submit your nomination to run in upcoming governance elections.</p>
+              <div id="candidate-upcoming-elections-list" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.25rem;">
+                <p style="color: var(--color-text-muted); font-size: 0.85rem;">No upcoming elections open for nomination.</p>
+              </div>
+            </div>
           </section>
 
           <!-- ── PANEL: Admin Dashboard ───────────────────────── -->
@@ -439,29 +448,26 @@
                 <textarea id="campaign-whitelist" rows="3" placeholder="0x...&#10;0x..."></textarea>
               </div>
 
-              <!-- Nominees -->
-              <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                <label style="display: flex; justify-content: space-between; align-items: center;">
-                  <span>Registered Nominees</span>
-                  <button id="btn-add-candidate-input" class="btn btn-ghost btn-sm"><i class="fa-solid fa-plus"></i> Add Nominee</button>
-                </label>
-                <div id="candidates-input-container" style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;">
-                  <div class="candidate-input-row">
-                    <input type="text" class="cand-input-name" placeholder="Candidate Name" value="Candidate Alpha" />
-                    <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" value="Pioneering absolute transparency and open communication." />
-                    <button class="btn-icon btn-remove-candidate" disabled><i class="fa-solid fa-trash-can"></i></button>
-                  </div>
-                  <div class="candidate-input-row">
-                    <input type="text" class="cand-input-name" placeholder="Candidate Name" value="Candidate Beta" />
-                    <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" value="Advocating for dynamic updates and streamlined execution." />
-                    <button class="btn-icon btn-remove-candidate" disabled><i class="fa-solid fa-trash-can"></i></button>
-                  </div>
-                </div>
+              <div class="alert-box info" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Once deployed, this election will start in the **Pre-registration Phase**. Verified candidates can apply to run in this election. After approving nominees, you can officially start the voting phase.</span>
               </div>
 
               <button id="btn-deploy-campaign" class="btn" style="margin-top: 0.5rem;">
                 <i class="fa-solid fa-rocket"></i> Deploy Election Smart Contract
               </button>
+            </div>
+
+            <!-- Manage Deployed Elections Card -->
+            <div class="card" id="admin-manage-elections-card">
+              <h2 class="card-title"><i class="fa-solid fa-list-check"></i> Manage Deployed Elections</h2>
+              <p class="card-subtitle">Approve candidate applications and trigger voting phases.</p>
+              <div id="admin-elections-list" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
+                  <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 0.5rem; display: block;"></i>
+                  <p>No elections deployed on-chain yet.</p>
+                </div>
+              </div>
             </div>
           </section>
 

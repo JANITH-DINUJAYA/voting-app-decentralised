@@ -95,31 +95,43 @@ export class VerifierPortal {
 
     pendingApps.forEach(app => {
       const card = document.createElement('div');
-      card.className = 'verifier-app-card';
+      card.className = 'kyc-application-card';
 
       const isCandidate = app.role === 'CANDIDATE';
 
       card.innerHTML = `
-        <div class="verifier-app-header">
-          <span class="verifier-app-name">${app.name}</span>
-          <span class="verifier-app-role ${isCandidate ? 'candidate' : ''}">${app.role} nominee</span>
+        <div class="kyc-app-header">
+          <span style="font-weight: 700; font-size: 1rem;">${app.name}</span>
+          <span class="status-badge ${isCandidate ? 'pending' : 'verified'}" style="font-size: 0.7rem;">
+            <i class="fa-solid ${isCandidate ? 'fa-user-tag' : 'fa-user'}"></i> ${app.role}
+          </span>
         </div>
         
-        <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; background: var(--bg-main); border: 1px solid var(--border-color); padding: 0.75rem;">
-          <div><strong>Address:</strong> <span style="font-family: var(--font-mono); color: var(--color-secondary);">${app.address}</span></div>
-          <div><strong>Email:</strong> ${app.email}</div>
-          ${app.bio ? `<div><strong>Manifesto:</strong> ${app.bio}</div>` : ''}
-        </div>
+        <div class="kyc-app-body">
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; padding: 0.85rem; background: var(--bg-main); border: 1px solid var(--border-color);">
+            <div><strong>Blockchain Address:</strong> <span style="font-family: var(--font-mono); color: var(--color-secondary);">${app.address}</span></div>
+            <div><strong>Email Address:</strong> ${app.email}</div>
+            ${app.bio ? `<div style="margin-top: 0.25rem;"><strong>Manifesto Statement:</strong> <span style="color: var(--color-text-muted); font-style: italic;">"${app.bio}"</span></div>` : ''}
+          </div>
 
-        <div class="verifier-nic-container">
-          <strong>National Identity Card (NIC) hosted on ImgBB:</strong>
-          <a href="${app.nicPhoto}" target="_blank" style="color: var(--color-primary); font-size: 0.75rem; text-decoration: none; margin-bottom: 0.25rem; display: block;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Photo in new tab</a>
-          <img src="${app.nicPhoto}" class="verifier-nic-image" alt="NIC Photo File" onerror="this.src='https://via.placeholder.com/400x250?text=Image+Load+Error'" />
-        </div>
+          <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong>National Identity Card (NIC)</strong>
+              <a href="${app.nicPhoto}" target="_blank" rel="noopener" style="color: var(--color-primary); font-size: 0.75rem; font-weight: 600; text-decoration: none;">
+                <i class="fa-solid fa-up-right-from-square"></i> View Original
+              </a>
+            </div>
+            <img src="${app.nicPhoto}" class="kyc-app-nic-preview" alt="NIC Photo Preview" onerror="this.src='https://via.placeholder.com/400x250?text=NIC+Photo+Unavailable'" />
+          </div>
 
-        <div class="form-row" style="margin-top: 0.5rem;">
-          <button class="btn btn-approve-kyc" style="background: var(--color-secondary); border-color: var(--color-secondary); color: var(--bg-main);"><i class="fa-solid fa-circle-check"></i> Approve Application</button>
-          <button class="btn btn-danger btn-reject-kyc"><i class="fa-solid fa-circle-xmark"></i> Reject Profile</button>
+          <div class="kyc-app-actions">
+            <button class="btn btn-approve-kyc" style="flex: 1; background: var(--color-secondary); border-color: var(--color-secondary); color: var(--bg-main);">
+              <i class="fa-solid fa-circle-check"></i> Approve Application
+            </button>
+            <button class="btn btn-danger btn-reject-kyc" style="flex: 1;">
+              <i class="fa-solid fa-circle-xmark"></i> Reject application
+            </button>
+          </div>
         </div>
       `;
 

@@ -264,6 +264,33 @@ export class VoterTerminal {
     }
 
     const contract = this.app.blockchain.contracts.get(contractAddr)!;
+
+    if (contract.status === 'PRE_REGISTRATION') {
+      this.selectedTitle.textContent = `${contract.title} ⏳ Nominations Phase`;
+      if (statusHeader) statusHeader.innerHTML = `
+        <div class="alert-box info">
+          <i class="fa-solid fa-clock"></i>
+          <div>
+            <strong>Election in Nominations Phase</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">This election is currently open for candidates to submit their nomination applications. Voting has not started yet.</p>
+          </div>
+        </div>
+      `;
+      this.radioContainer.innerHTML = `
+        <div style="text-align: center; color: var(--color-text-muted); padding: 1.5rem 0;">
+          <i class="fa-solid fa-user-plus" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 0.5rem; display: block;"></i>
+          <p style="font-size: 0.85rem;">Nominations are pending admin approval. Approved candidates will appear here once voting opens.</p>
+        </div>
+      `;
+      if (this.existingVoteBox) this.existingVoteBox.style.display = 'none';
+      if (this.txPayloadBox) this.txPayloadBox.textContent = 'Voting will unlock once the election starts.';
+      if (this.btnSubmitVote) {
+        this.btnSubmitVote.disabled = true;
+        this.btnSubmitVote.textContent = 'Election Not Started';
+      }
+      return;
+    }
+
     const isEnded = Date.now() > contract.deadline;
     this.selectedTitle.textContent = `${contract.title} ${isEnded ? '❌ Ended' : '✅ Active'}`;
 

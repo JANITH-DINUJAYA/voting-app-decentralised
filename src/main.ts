@@ -1,5 +1,6 @@
 import { Blockchain } from './blockchain/Blockchain';
 import { Wallet } from './blockchain/Wallet';
+import { Transaction } from './blockchain/Transaction';
 import { Router } from './router';
 import { LoginRegister } from './ui/LoginRegister';
 import { AdminPanel } from './ui/AdminPanel';
@@ -153,6 +154,8 @@ export class App {
         </div>
       `;
       standingsCard.style.display = 'none';
+      const applyCard = document.getElementById('candidate-apply-elections-card');
+      if (applyCard) applyCard.style.display = 'none';
       return;
     }
 
@@ -178,6 +181,8 @@ export class App {
         </div>
       `;
       standingsCard.style.display = 'none';
+      const applyCard = document.getElementById('candidate-apply-elections-card');
+      if (applyCard) applyCard.style.display = 'none';
       return;
     }
 
@@ -205,6 +210,8 @@ export class App {
         </div>
       `;
       standingsCard.style.display = 'none';
+      const applyCard = document.getElementById('candidate-apply-elections-card');
+      if (applyCard) applyCard.style.display = 'none';
       return;
     }
 
@@ -228,6 +235,8 @@ export class App {
         </div>
       `;
       standingsCard.style.display = 'none';
+      const applyCard = document.getElementById('candidate-apply-elections-card');
+      if (applyCard) applyCard.style.display = 'none';
       return;
     }
 
@@ -280,6 +289,11 @@ export class App {
     // Show standings card
     standingsCard.style.display = 'flex';
     this.renderCandidateStandings(this.selectedCampaignAddress);
+
+    // Show upcoming elections application card
+    const applyCard = document.getElementById('candidate-apply-elections-card');
+    if (applyCard) applyCard.style.display = 'flex';
+    this.renderCandidateUpcomingElections();
   }
 
   /**
@@ -330,6 +344,104 @@ export class App {
     });
   }
 
+  private renderCandidateUpcomingElections() {
+    const listEl = document.getElementById('candidate-upcoming-elections-list')!;
+    if (!listEl) return;
+
+    listEl.innerHTML = '';
+    const elections = Array.from(this.blockchain.contracts.entries()).filter(([_, c]) => c.status === 'PRE_REGISTRATION');
+
+    if (elections.length === 0) {
+      listEl.innerHTML = '<p style="color: var(--color-text-muted); font-size: 0.85rem; padding: 0.5rem 0;">No upcoming elections open for nomination.</p>';
+      return;
+    }
+
+    const myAddress = this.wallet?.address.toLowerCase() || '';
+    const myProfile = this.blockchain.voterRegistry.get(myAddress);
+
+    elections.forEach(([address, contract]) => {
+      const item = document.createElement('div');
+      item.style.background = 'var(--bg-main)';
+      item.style.border = '1px solid var(--border-color)';
+      item.style.padding = '1rem';
+      item.style.display = 'flex';
+      item.style.flexDirection = 'column';
+      item.style.gap = '0.5rem';
+
+      // Check if already applied
+      const application = contract.candidateApplicants.find(app => app.address === myAddress);
+
+      let actionHtml = '';
+      if (application) {
+        let badgeClass = 'pending';
+        if (application.status === 'APPROVED') badgeClass = 'verified';
+        if (application.status === 'REJECTED') badgeClass = 'rejected';
+
+        actionHtml = `<span class="status-badge ${badgeClass}" style="font-size: 0.72rem; font-weight: 700;">Application: ${application.status}</span>`;
+      } else {
+        actionHtml = `<button class="btn btn-secondary btn-sm btn-apply-to-election" data-election="${address}" style="font-size:0.75rem;"><i class="fa-solid fa-square-plus"></i> Submit Nomination</button>`;
+      }
+
+      item.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 700;">${contract.title}</h4>
+            <span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-secondary);">${address.substring(0, 16)}...</span>
+          </div>
+          <div>${actionHtml}</div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.4;">${contract.description}</p>
+      `;
+
+      const applyBtn = item.querySelector('.btn-apply-to-election') as HTMLButtonElement;
+      if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+          if (myProfile) {
+            this.applyForCandidacy(address, myProfile.name, myProfile.bio || '', applyBtn);
+          }
+        });
+      }
+
+      listEl.appendChild(item);
+    });
+  }
+
+  private async applyForCandidacy(contractAddress: string, name: string, bio: string, btn: HTMLButtonElement) {
+    if (!this.wallet) return;
+
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Applying...';
+
+      const wallet = this.wallet;
+      const currentNonce = this.blockchain.getNonce(wallet.address);
+
+      const tx = new Transaction({
+        sender: wallet.address,
+        recipient: contractAddress,
+        type: 'APPLY_CANDIDACY',
+        payload: {
+          name,
+          bio
+        },
+        nonce: currentNonce,
+        timestamp: Date.now(),
+        publicKey: wallet.publicKeyHex
+      });
+
+      await tx.signTransaction(wallet);
+      await this.blockchain.addTransaction(tx);
+
+      this.showNotification('Candidacy nomination application submitted successfully! Mine block to finalize.', 'success');
+      this.refreshAllViews();
+      this.router.navigate('#/explorer');
+    } catch (e: any) {
+      console.error(e);
+      this.showNotification(`Application failed: ${e.message}`, 'error');
+      this.refreshAllViews();
+    }
+  }
+
   /**
    * Render the public welcome hub with optional campaign results
    */
@@ -350,6 +462,24 @@ export class App {
     const contract = this.blockchain.contracts.get(this.selectedCampaignAddress);
     if (!contract) {
       if (welcomeResults) welcomeResults.style.display = 'none';
+      return;
+    }
+
+    if (contract.status === 'PRE_REGISTRATION') {
+      welcomeChart.innerHTML = `
+        <div style="text-align: center; padding: 1.5rem 0;">
+          <i class="fa-solid fa-clock" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 0.5rem; display: block;"></i>
+          <h4 style="margin-bottom: 0.25rem;">Nominations Phase</h4>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem; max-width: 320px; margin: 0 auto;">Candidates are currently applying to run in this election. Once the admin starts the voting phase, live results will display here.</p>
+        </div>
+      `;
+      welcomeTimer.textContent = 'PENDING';
+      welcomeTimer.style.background = 'var(--color-primary)';
+      welcomeTimer.style.webkitBackgroundClip = 'initial';
+      welcomeTimer.style.webkitTextFillColor = 'var(--color-text-main)';
+      welcomeTimerLabel.textContent = 'Awaiting Voting Phase';
+      welcomeWinnerCard.style.display = 'none';
+      welcomeResults.style.display = 'grid';
       return;
     }
 

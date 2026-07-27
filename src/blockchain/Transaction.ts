@@ -8,7 +8,10 @@ export type TransactionType =
   | 'CLAIM_FAUCET'
   | 'REGISTER_VOTER_KYC'
   | 'REGISTER_CANDIDATE_KYC'
-  | 'VERIFY_IDENTITY';
+  | 'VERIFY_IDENTITY'
+  | 'APPLY_CANDIDACY'
+  | 'APPROVE_CANDIDACY'
+  | 'START_ELECTION';
 
 export interface TransactionData {
   sender: string;

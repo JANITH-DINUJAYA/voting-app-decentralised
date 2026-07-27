@@ -125,6 +125,10 @@ export class Blockchain {
         throw new Error(`Transaction Rejected: Candidate "${candidateName}" is not running.`);
       }
 
+      if (contract.status !== 'ACTIVE') {
+        throw new Error('Transaction Rejected: This election is not open for voting.');
+      }
+
       if (transaction.timestamp > contract.deadline) {
         throw new Error('Transaction Rejected: Voting campaign deadline has already passed.');
       }
@@ -153,6 +157,46 @@ export class Blockchain {
       }
       if (transaction.sender.toLowerCase() !== contract.creator.toLowerCase()) {
         throw new Error('Transaction Rejected: Only the election creator can register voters.');
+      }
+    }
+
+    if (transaction.type === 'APPLY_CANDIDACY') {
+      const contract = this.contracts.get(transaction.recipient);
+      if (!contract) {
+        throw new Error('Transaction Rejected: Destination contract address does not exist.');
+      }
+      if (contract.status !== 'PRE_REGISTRATION') {
+        throw new Error('Transaction Rejected: Candidate applications are closed.');
+      }
+      const profile = this.voterRegistry.get(transaction.sender.toLowerCase());
+      if (!profile || profile.status !== 'VERIFIED' || profile.role !== 'CANDIDATE') {
+        throw new Error('Transaction Rejected: Sender must be a verified candidate.');
+      }
+    }
+
+    if (transaction.type === 'APPROVE_CANDIDACY') {
+      const contract = this.contracts.get(transaction.recipient);
+      if (!contract) {
+        throw new Error('Transaction Rejected: Destination contract address does not exist.');
+      }
+      if (transaction.sender.toLowerCase() !== contract.creator.toLowerCase()) {
+        throw new Error('Transaction Rejected: Only the election creator can manage candidate applications.');
+      }
+      if (contract.status !== 'PRE_REGISTRATION') {
+        throw new Error('Transaction Rejected: Election status is not in candidate application phase.');
+      }
+    }
+
+    if (transaction.type === 'START_ELECTION') {
+      const contract = this.contracts.get(transaction.recipient);
+      if (!contract) {
+        throw new Error('Transaction Rejected: Destination contract address does not exist.');
+      }
+      if (transaction.sender.toLowerCase() !== contract.creator.toLowerCase()) {
+        throw new Error('Transaction Rejected: Only the election creator can start this election.');
+      }
+      if (contract.status !== 'PRE_REGISTRATION') {
+        throw new Error('Transaction Rejected: Election has already started or ended.');
       }
     }
 
@@ -274,6 +318,30 @@ export class Blockchain {
         const contract = this.contracts.get(tx.recipient);
         if (contract) {
           contract.castVote(tx.sender, tx.payload.candidateName, tx.timestamp, txHash);
+        }
+        break;
+      }
+
+      case 'APPLY_CANDIDACY': {
+        const contract = this.contracts.get(tx.recipient);
+        if (contract) {
+          contract.applyCandidacy(tx.sender, tx.payload.name, tx.payload.bio);
+        }
+        break;
+      }
+
+      case 'APPROVE_CANDIDACY': {
+        const contract = this.contracts.get(tx.recipient);
+        if (contract) {
+          contract.approveCandidacy(tx.payload.candidateAddress, tx.payload.approved, tx.sender);
+        }
+        break;
+      }
+
+      case 'START_ELECTION': {
+        const contract = this.contracts.get(tx.recipient);
+        if (contract) {
+          contract.startElection(tx.payload.durationMinutes, tx.sender);
         }
         break;
       }
@@ -417,6 +485,30 @@ export class Blockchain {
               const contract = tempContracts.get(tx.recipient);
               if (contract) {
                 contract.castVote(tx.sender, tx.payload.candidateName, tx.timestamp, txHash);
+              }
+              break;
+            }
+
+            case 'APPLY_CANDIDACY': {
+              const contract = tempContracts.get(tx.recipient);
+              if (contract) {
+                contract.applyCandidacy(tx.sender, tx.payload.name, tx.payload.bio);
+              }
+              break;
+            }
+
+            case 'APPROVE_CANDIDACY': {
+              const contract = tempContracts.get(tx.recipient);
+              if (contract) {
+                contract.approveCandidacy(tx.payload.candidateAddress, tx.payload.approved, tx.sender);
+              }
+              break;
+            }
+
+            case 'START_ELECTION': {
+              const contract = tempContracts.get(tx.recipient);
+              if (contract) {
+                contract.startElection(tx.payload.durationMinutes, tx.sender);
               }
               break;
             }

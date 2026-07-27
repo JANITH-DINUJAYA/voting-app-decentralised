@@ -171,6 +171,22 @@ export async function runAutomatedTests(log: (msg: string, type: 'pass' | 'fail'
       throw new Error('Fail: Admin verification transaction did not approve voter profile.');
     }
 
+    // Start Election to open voting phase
+    log('Test 6.5: Starting the election voting phase...', 'info');
+    const startTx = new Transaction({
+      sender: adminWallet.address,
+      recipient: contractAddress,
+      type: 'START_ELECTION',
+      payload: { durationMinutes: 5 },
+      nonce: 3, // admin wallet's next nonce
+      timestamp: Date.now(),
+      publicKey: adminWallet.publicKeyHex
+    });
+    await startTx.signTransaction(adminWallet);
+    await bc.addTransaction(startTx);
+    await bc.minePendingTransactions(adminWallet.address);
+    log('Pass: Election voting phase opened.', 'pass');
+
     // ----------------------------------------------------
     // Test 7: Casting Vote after Verification
     // ----------------------------------------------------
