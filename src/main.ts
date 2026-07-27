@@ -51,10 +51,10 @@ export class App {
     this.tamperConsole = new TamperConsole(this);
     this.verifierPortal = new VerifierPortal(this);
 
-    // 2. Initialize Hash Router (coordinates initial page parse)
+    // 2. Initialize Hash Router
     this.router = new Router(this);
 
-    // 3. Set up event handler for public welcome select list
+    // 3. Welcome hub campaign selector
     const welcomeSelect = document.getElementById('select-campaign-welcome') as HTMLSelectElement;
     if (welcomeSelect) {
       welcomeSelect.addEventListener('change', () => {
@@ -62,18 +62,35 @@ export class App {
       });
     }
 
-    // 4. Setup automated diagnostic audits
+    // 4. Candidate standings campaign selector
+    const candidateSelect = document.getElementById('select-campaign-candidates') as HTMLSelectElement;
+    if (candidateSelect) {
+      candidateSelect.addEventListener('change', () => {
+        this.renderCandidateStandings(candidateSelect.value);
+      });
+    }
+
+    // 5. Sidebar sign-out button
+    const navSignout = document.getElementById('btn-nav-signout');
+    if (navSignout) {
+      navSignout.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.loginRegister.triggerSignOut();
+      });
+    }
+
+    // 6. Setup automated diagnostics
     this.setupDiagnostics();
 
-    // 5. Initial sync
+    // 7. Initial sync
     this.refreshAllViews();
     this.tamperConsole.init();
-    
+
     this.showNotification('VoteChain Network active. Welcome to decentralized governance!', 'info');
   }
 
   /**
-   * Action trigger when a route view becomes active
+   * Triggered when a route/panel becomes active
    */
   triggerPanelOnOpen(hash: string) {
     switch (hash) {
@@ -84,11 +101,14 @@ export class App {
       case '#/admin/login':
         this.loginRegister.render();
         break;
+      case '#/profile':
+        this.loginRegister.render(); // Profile panel re-uses LoginRegister render
+        break;
       case '#/voter':
         this.voterTerminal.render();
         break;
       case '#/candidate':
-        this.renderCandidateNomineePortal();
+        this.renderCandidatePanel();
         break;
       case '#/admin':
         this.adminPanel.render();
@@ -106,75 +126,212 @@ export class App {
   }
 
   /**
-   * Render Candidate Nomination standing view
+   * Renders the complete candidate dashboard with proper state-aware flow
    */
-  private renderCandidateNomineePortal() {
-    const card = document.getElementById('candidate-portal-details')!;
-    if (!card) return;
+  private renderCandidatePanel() {
+    const statusHeader = document.getElementById('candidate-status-header')!;
+    const detailsCard = document.getElementById('candidate-portal-details')!;
+    const standingsCard = document.getElementById('candidate-standings-card')!;
 
+    if (!statusHeader || !detailsCard) return;
+
+    // Case 1: No wallet yet
     if (!this.wallet) {
-      card.innerHTML = `<p style="color: var(--color-danger); text-align: center; padding: 2rem;"><i class="fa-solid fa-wallet" style="font-size: 2rem; margin-bottom: 0.5rem;"></i><br/>Wallet not generated. Please access the "Profile Session" page to generate your wallet.</p>`;
+      statusHeader.innerHTML = `
+        <div class="alert-box warning">
+          <i class="fa-solid fa-wallet"></i>
+          <div>
+            <strong>Wallet Required</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">You need a cryptographic wallet to participate. Go to <a href="#/profile" style="color: var(--color-primary); font-weight: 700;">My Profile</a> to generate your wallet and submit KYC verification.</p>
+          </div>
+        </div>
+      `;
+      detailsCard.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
+          <i class="fa-solid fa-wallet" style="font-size: 2rem; color: var(--color-warning); display: block; margin-bottom: 0.75rem;"></i>
+          <p>Set up your wallet in <a href="#/profile" style="color: var(--color-primary);">My Profile</a> to continue.</p>
+        </div>
+      `;
+      standingsCard.style.display = 'none';
       return;
     }
 
     const profile = this.blockchain.voterRegistry.get(this.wallet.address.toLowerCase());
-    if (profile && profile.role === 'CANDIDATE') {
-      if (profile.status !== 'VERIFIED') {
-        card.innerHTML = `<p style="color: var(--color-primary); text-align: center; padding: 2rem;"><i class="fa-solid fa-hourglass-half" style="font-size: 2rem; margin-bottom: 0.5rem;"></i><br/>KYC Identity Audit Pending. Your profile status is currently <strong>${profile.status}</strong>. Please wait for verifier approval.</p>`;
-        return;
-      }
 
-      card.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 1.5rem; border-bottom: 1px solid rgba(157, 78, 221, 0.1); padding-bottom: 1rem;">
-          <div id="candidate-portal-avatar" style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 1.5rem; color: var(--bg-main);">CA</div>
+    // Case 2: KYC not yet submitted
+    if (!profile) {
+      statusHeader.innerHTML = `
+        <div class="alert-box info">
+          <i class="fa-solid fa-circle-info"></i>
           <div>
-            <h3 id="candidate-portal-name" style="font-size: 1.25rem;">Candidate Alpha</h3>
-            <span id="candidate-portal-address" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-secondary);">0x...</span>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>KYC Profile Status</label>
-            <span id="candidate-portal-kyc-status" style="font-weight: 700; font-size: 1rem;">VERIFIED</span>
-          </div>
-          <div class="form-group">
-            <label>NIC Identity Link</label>
-            <a id="candidate-portal-nic-link" href="" target="_blank" style="color: var(--color-primary); font-size: 0.9rem; font-weight: 600; text-decoration: none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Uploaded NIC on ImgBB</a>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Nomination Manifesto</label>
-          <div style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 1rem; font-size: 0.9rem; line-height: 1.5;" id="candidate-portal-bio">
-            Your manifesto biography...
+            <strong>KYC Verification Required</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">To appear as a candidate in elections, you must submit your identity verification. Go to <a href="#/profile" style="color: var(--color-primary); font-weight: 700;">My Profile</a> to submit your NIC and manifesto.</p>
           </div>
         </div>
       `;
-
-      const pName = document.getElementById('candidate-portal-name')!;
-      const pAddress = document.getElementById('candidate-portal-address')!;
-      const pKycStatus = document.getElementById('candidate-portal-kyc-status')!;
-      const pNicLink = document.getElementById('candidate-portal-nic-link') as HTMLAnchorElement;
-      const pBio = document.getElementById('candidate-portal-bio')!;
-      const pAvatar = document.getElementById('candidate-portal-avatar')!;
-
-      pName.textContent = profile.name;
-      pAddress.textContent = this.wallet.address;
-      pKycStatus.textContent = profile.status;
-      pKycStatus.style.color = 'var(--color-secondary)';
-      pNicLink.href = profile.nicPhoto;
-      pBio.textContent = profile.bio || 'No manifesto provided.';
-      
-      const initials = profile.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-      pAvatar.textContent = initials;
-    } else {
-      card.innerHTML = `<p style="color: var(--color-danger); text-align: center; padding: 2rem;"><i class="fa-solid fa-circle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem;"></i><br/>KYC application required. Please access the "Profile Session" page to submit your details and wait for verifier approval.</p>`;
+      detailsCard.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+          <i class="fa-solid fa-id-card" style="font-size: 2.5rem; color: var(--color-primary); display: block; margin-bottom: 0.75rem;"></i>
+          <h3 style="margin-bottom: 0.5rem;">Identity Not Yet Submitted</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem; max-width: 360px; margin: 0 auto 1rem;">Submit your National Identity Card and campaign manifesto in the Profile section to register as a candidate.</p>
+          <a href="#/profile" class="btn"><i class="fa-solid fa-arrow-right"></i> Go to My Profile</a>
+        </div>
+      `;
+      standingsCard.style.display = 'none';
+      return;
     }
+
+    // Case 3: KYC pending
+    if (profile.status === 'PENDING') {
+      statusHeader.innerHTML = `
+        <div class="alert-box warning">
+          <i class="fa-solid fa-hourglass-half"></i>
+          <div>
+            <strong>Identity Verification Pending</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your KYC application has been submitted and is awaiting review by the system verifier. You will be able to participate in elections once approved.</p>
+          </div>
+        </div>
+      `;
+      detailsCard.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+          <i class="fa-solid fa-hourglass-half" style="font-size: 2.5rem; color: var(--color-warning); display: block; margin-bottom: 0.75rem; animation: spin 3s linear infinite;"></i>
+          <h3 style="margin-bottom: 0.5rem;">Audit In Progress</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem;">Your application is queued for review. This typically takes a few moments.</p>
+          <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.35rem;">
+            <div><strong>Name:</strong> ${profile.name}</div>
+            <div><strong>Email:</strong> ${profile.email}</div>
+            <div><strong>Status:</strong> <span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> PENDING</span></div>
+          </div>
+        </div>
+      `;
+      standingsCard.style.display = 'none';
+      return;
+    }
+
+    // Case 4: KYC rejected
+    if (profile.status === 'REJECTED') {
+      statusHeader.innerHTML = `
+        <div class="alert-box danger">
+          <i class="fa-solid fa-circle-xmark"></i>
+          <div>
+            <strong>Identity Verification Rejected</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your KYC application was rejected by the system verifier. Please re-submit with a clearer NIC photo in <a href="#/profile" style="color: var(--color-danger); font-weight: 700;">My Profile</a>.</p>
+          </div>
+        </div>
+      `;
+      detailsCard.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+          <i class="fa-solid fa-circle-xmark" style="font-size: 2.5rem; color: var(--color-danger); display: block; margin-bottom: 0.75rem;"></i>
+          <h3 style="margin-bottom: 0.5rem; color: var(--color-danger);">Application Rejected</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Please re-submit your identity verification with clear, valid documents.</p>
+          <a href="#/profile" class="btn btn-danger btn-sm"><i class="fa-solid fa-redo"></i> Re-submit KYC</a>
+        </div>
+      `;
+      standingsCard.style.display = 'none';
+      return;
+    }
+
+    // Case 5: VERIFIED — show full profile + standings
+    statusHeader.innerHTML = `
+      <div class="alert-box success">
+        <i class="fa-solid fa-circle-check"></i>
+        <div>
+          <strong>Identity Verified — You are a Registered Candidate</strong>
+          <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your identity has been verified on-chain. You are eligible to participate in elections as a candidate.</p>
+        </div>
+      </div>
+    `;
+
+    const initials = profile.name.split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase();
+
+    detailsCard.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; color: var(--bg-main); flex-shrink: 0;">${initials}</div>
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 700;">${profile.name}</h3>
+          <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-secondary);">${this.wallet!.address}</span>
+        </div>
+        <div style="margin-left: auto;">
+          <span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> VERIFIED</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.88rem;">
+        <div class="form-group">
+          <label>Email on Record</label>
+          <span>${profile.email}</span>
+        </div>
+        <div class="form-group">
+          <label>NIC Document</label>
+          <a href="${profile.nicPhoto}" target="_blank" rel="noopener" style="color: var(--color-primary); font-weight: 600; font-size: 0.88rem; text-decoration: none;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> View NIC on ImgBB
+          </a>
+        </div>
+      </div>
+
+      ${profile.bio ? `
+        <div class="form-group">
+          <label>Candidacy Manifesto</label>
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 0.85rem 1rem; font-size: 0.88rem; line-height: 1.6; color: var(--color-text-main);">${profile.bio}</div>
+        </div>
+      ` : ''}
+    `;
+
+    // Show standings card
+    standingsCard.style.display = 'flex';
+    this.renderCandidateStandings(this.selectedCampaignAddress);
   }
 
   /**
-   * Render the public welcome hub results
+   * Render live election standings for the candidate panel
+   */
+  private renderCandidateStandings(contractAddress: string) {
+    const titleEl = document.getElementById('candidate-selected-title')!;
+    const chartEl = document.getElementById('candidate-standings-chart')!;
+    const select = document.getElementById('select-campaign-candidates') as HTMLSelectElement;
+
+    if (select && contractAddress) select.value = contractAddress;
+
+    if (!contractAddress || !this.blockchain.contracts.has(contractAddress)) {
+      if (titleEl) titleEl.textContent = 'No Election Selected';
+      if (chartEl) chartEl.innerHTML = '<p style="color: var(--color-text-muted); font-size: 0.85rem; padding: 0.5rem 0;">Select an election above to view your standings.</p>';
+      return;
+    }
+
+    const contract = this.blockchain.contracts.get(contractAddress)!;
+    const myAddress = this.wallet?.address.toLowerCase();
+    const tallies = contract.getTallies();
+    const totalVotes = Array.from(contract.votes.values()).length;
+
+    if (titleEl) titleEl.textContent = contract.title + (Date.now() > contract.deadline ? ' ❌ Ended' : ' ✅ Active');
+    if (!chartEl) return;
+
+    chartEl.innerHTML = '';
+    contract.candidates.forEach(cand => {
+      const votes = tallies[cand.name] || 0;
+      const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+      const myProfile = this.blockchain.voterRegistry.get(myAddress || '');
+      const isMe = myProfile?.name === cand.name;
+
+      const group = document.createElement('div');
+      group.className = `standings-bar-group ${isMe ? 'is-me' : ''}`;
+      group.innerHTML = `
+        <div class="standings-bar-labels">
+          <span style="font-weight: ${isMe ? '800' : '600'}; color: ${isMe ? 'var(--color-primary)' : 'var(--color-text-main)'};">
+            ${isMe ? '⭐ ' : ''}${cand.name} ${isMe ? '<span style="font-size:0.72rem; color:var(--color-primary);">(You)</span>' : ''}
+          </span>
+          <span style="font-family: var(--font-mono); font-weight: 700; color: ${isMe ? 'var(--color-primary)' : 'var(--color-secondary)'};">${votes} vote${votes !== 1 ? 's' : ''} (${percentage}%)</span>
+        </div>
+        <div class="standings-bar-track">
+          <div class="standings-bar-fill ${isMe ? 'is-me' : ''}" style="width: ${percentage}%"></div>
+        </div>
+      `;
+      chartEl.appendChild(group);
+    });
+  }
+
+  /**
+   * Render the public welcome hub with optional campaign results
    */
   private renderWelcomeHub() {
     const welcomeResults = document.getElementById('welcome-results-section')!;
@@ -186,13 +343,13 @@ export class App {
     const welcomeWinnerVotes = document.getElementById('welcome-winner-votes')!;
 
     if (!this.selectedCampaignAddress) {
-      welcomeResults.style.display = 'none';
+      if (welcomeResults) welcomeResults.style.display = 'none';
       return;
     }
 
     const contract = this.blockchain.contracts.get(this.selectedCampaignAddress);
     if (!contract) {
-      welcomeResults.style.display = 'none';
+      if (welcomeResults) welcomeResults.style.display = 'none';
       return;
     }
 
@@ -210,7 +367,7 @@ export class App {
       group.innerHTML = `
         <div class="chart-labels">
           <span style="font-weight: 600;">${cand.name}</span>
-          <span style="font-family: var(--font-mono); font-weight: 700; color: var(--color-secondary);">${votes} votes (${percentage}%)</span>
+          <span style="font-family: var(--font-mono); font-weight: 700; color: var(--color-secondary);">${votes} vote${votes !== 1 ? 's' : ''} (${percentage}%)</span>
         </div>
         <div class="chart-bar-track">
           <div class="chart-bar-fill" style="width: ${percentage}%"></div>
@@ -219,7 +376,7 @@ export class App {
       welcomeChart.appendChild(group);
     });
 
-    // Countdown and Winner details
+    // Countdown timer + winner
     const updateTime = () => {
       const remaining = contract.deadline - Date.now();
       if (remaining <= 0) {
@@ -227,35 +384,28 @@ export class App {
         welcomeTimer.style.background = 'var(--color-danger)';
         welcomeTimer.style.webkitBackgroundClip = 'initial';
         welcomeTimer.style.webkitTextFillColor = 'var(--color-text-main)';
-        welcomeTimerLabel.textContent = 'Election Campaign Ended';
+        welcomeTimerLabel.textContent = 'Election Ended';
 
-        // Set Winner
         if (totalVotes > 0) {
           let highest = -1;
           let winnerNameStr = '';
           contract.candidates.forEach(c => {
             const v = tallies[c.name] || 0;
-            if (v > highest) {
-              highest = v;
-              winnerNameStr = c.name;
-            } else if (v === highest && v > 0) {
-              winnerNameStr += ` & ${c.name}`;
-            }
+            if (v > highest) { highest = v; winnerNameStr = c.name; }
+            else if (v === highest && v > 0) { winnerNameStr += ` & ${c.name}`; }
           });
           welcomeWinnerName.textContent = winnerNameStr;
-          welcomeWinnerVotes.textContent = `with ${highest} verified votes`;
-          welcomeWinnerCard.style.display = 'block';
+          welcomeWinnerVotes.textContent = `with ${highest} verified vote${highest !== 1 ? 's' : ''}`;
         } else {
           welcomeWinnerName.textContent = 'No Votes Cast';
-          welcomeWinnerVotes.textContent = 'Closed with zero ballots.';
-          welcomeWinnerCard.style.display = 'block';
+          welcomeWinnerVotes.textContent = 'Election closed with zero ballots.';
         }
+        welcomeWinnerCard.style.display = 'block';
       } else {
-        const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-        
-        welcomeTimer.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const h = Math.floor(remaining / 3600000);
+        const m = Math.floor((remaining % 3600000) / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        welcomeTimer.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         welcomeTimer.style.background = 'linear-gradient(135deg, #ff00c8, #00f5d4)';
         welcomeTimer.style.webkitBackgroundClip = 'text';
         welcomeTimer.style.webkitTextFillColor = 'transparent';
@@ -263,13 +413,13 @@ export class App {
         welcomeWinnerCard.style.display = 'none';
       }
     };
-    
+
     updateTime();
     welcomeResults.style.display = 'grid';
   }
 
   /**
-   * Sync global statistics numbers
+   * Sync global statistics numbers in the sidebar
    */
   updateStats() {
     const blockCountEl = document.getElementById('stat-blocks');
@@ -277,119 +427,121 @@ export class App {
     const campaignCountEl = document.getElementById('stat-campaigns');
 
     let totalTxs = 0;
-    this.blockchain.chain.forEach(block => {
-      totalTxs += block.transactions.length;
-    });
+    this.blockchain.chain.forEach(block => { totalTxs += block.transactions.length; });
 
     if (blockCountEl) blockCountEl.textContent = this.blockchain.chain.length.toString();
     if (txCountEl) txCountEl.textContent = totalTxs.toString();
     if (campaignCountEl) campaignCountEl.textContent = this.blockchain.contracts.size.toString();
+
+    // Also update admin dashboard stat cards if visible
+    const adminElectionsEl = document.getElementById('admin-stat-elections');
+    const adminPendingEl = document.getElementById('admin-stat-pending');
+    const adminVotesEl = document.getElementById('admin-stat-votes');
+
+    if (adminElectionsEl) adminElectionsEl.textContent = this.blockchain.contracts.size.toString();
+
+    if (adminPendingEl) {
+      const pending = Array.from(this.blockchain.voterRegistry.values()).filter(p => p.status === 'PENDING').length;
+      adminPendingEl.textContent = pending.toString();
+    }
+
+    if (adminVotesEl) {
+      let totalVotes = 0;
+      this.blockchain.contracts.forEach(contract => {
+        totalVotes += contract.votes.size;
+      });
+      adminVotesEl.textContent = totalVotes.toString();
+    }
   }
 
   /**
-   * Re-evaluates ledger hashes and signatures, modifying the integrity badge
+   * Re-evaluates ledger hashes and updates the integrity badge
    */
   async updateIntegrityBadge() {
     const badge = document.getElementById('integrity-badge');
     const badgeText = document.getElementById('integrity-status-text');
-    
+
     if (!badge || !badgeText) return;
 
     const audit = await this.blockchain.checkLedgerValidity();
     const consistency = await this.blockchain.verifyStateConsistency();
-    
+
     if (audit.isValid && consistency) {
       badge.className = 'integrity-banner valid';
-      badgeText.textContent = 'Ledger Secured';
       badge.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Ledger Secured</span>';
     } else {
       badge.className = 'integrity-banner invalid';
       let reason = 'Ledger Altered';
-      if (!audit.isValid) {
-        reason = `Block #${audit.errorBlockIndex} Tampered!`;
-      } else if (!consistency) {
-        reason = `State Mismatch Detected!`;
-      }
-      badgeText.textContent = reason;
+      if (!audit.isValid) reason = `Block #${audit.errorBlockIndex} Tampered!`;
+      else if (!consistency) reason = 'State Mismatch!';
       badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${reason}</span>`;
     }
   }
 
   /**
-   * Shared helper to synchronize all campaign drop-downs in panels
+   * Sync all campaign dropdowns to current blockchain state
    */
   syncCampaignDropdowns() {
     const dropdownIds = [
       'select-campaign-welcome',
-      'select-campaign-candidates', 
-      'select-campaign-vote', 
-      'select-campaign-results'
+      'select-campaign-candidates',
+      'select-campaign-vote',
     ];
-    
+
     dropdownIds.forEach(id => {
       const dropdown = document.getElementById(id) as HTMLSelectElement;
       if (!dropdown) return;
-      
+
       const prevValue = dropdown.value;
-      dropdown.innerHTML = '<option value="">-- Choose Campaign --</option>';
-      
+      dropdown.innerHTML = '<option value="">— Choose Election —</option>';
+
       this.blockchain.contracts.forEach((contract, address) => {
-        const option = document.createElement('option');
-        option.value = address;
-        option.textContent = `${contract.title} (${address.substring(0, 8)}...)`;
-        dropdown.appendChild(option);
+        const opt = document.createElement('option');
+        opt.value = address;
+        opt.textContent = `${contract.title} (${address.substring(0, 8)}...)`;
+        dropdown.appendChild(opt);
       });
-      
-      // Preserve selection if it still exists
+
+      // Preserve selection
       if (this.blockchain.contracts.has(prevValue)) {
         dropdown.value = prevValue;
-      } else if (dropdown.value === '' && this.blockchain.contracts.size > 0 && this.selectedCampaignAddress) {
+      } else if (!dropdown.value && this.selectedCampaignAddress && this.blockchain.contracts.has(this.selectedCampaignAddress)) {
         dropdown.value = this.selectedCampaignAddress;
       }
     });
   }
 
   /**
-   * Global function to update the entire application UI
+   * Global UI refresh — call after any blockchain state change
    */
   async refreshAllViews() {
     this.updateStats();
     await this.updateIntegrityBadge();
     this.syncCampaignDropdowns();
     this.router.updateNavigationSidebarLayout();
-    
-    // Update currently visible panels depending on routing
+
     const hash = window.location.hash || '#/';
     this.triggerPanelOnOpen(hash);
   }
 
   /**
-   * Helper to set selected election globally
+   * Set selected campaign globally and sync all dropdowns
    */
   selectCampaign(address: string) {
     this.selectedCampaignAddress = address;
-    
-    // Sync current values across all dropdowns
-    const dropdownIds = [
-      'select-campaign-welcome',
-      'select-campaign-candidates', 
-      'select-campaign-vote', 
-      'select-campaign-results'
-    ];
-    
+
+    const dropdownIds = ['select-campaign-welcome', 'select-campaign-candidates', 'select-campaign-vote'];
     dropdownIds.forEach(id => {
-      const dropdown = document.getElementById(id) as HTMLSelectElement;
-      if (dropdown) dropdown.value = address;
+      const d = document.getElementById(id) as HTMLSelectElement;
+      if (d) d.value = address;
     });
 
-    // Refresh display
     this.refreshAllViews();
   }
 
   private setupDiagnostics() {
     const btnRun = document.getElementById('btn-run-diagnostics') as HTMLButtonElement;
     const logBox = document.getElementById('diagnostics-log-box')!;
-
     if (!btnRun || !logBox) return;
 
     btnRun.addEventListener('click', async () => {
@@ -400,10 +552,9 @@ export class App {
 
       const appendLog = (msg: string, type: 'pass' | 'fail' | 'info') => {
         const item = document.createElement('div');
-        let color = '#a5a1c0'; // info
+        let color = '#a5a1c0';
         if (type === 'pass') color = 'var(--color-secondary)';
         if (type === 'fail') color = 'var(--color-danger)';
-        
         item.style.color = color;
         item.innerHTML = msg;
         logBox.appendChild(item);
@@ -416,7 +567,7 @@ export class App {
         appendLog(`Critical Audit Crash: ${err.message}`, 'fail');
       } finally {
         btnRun.disabled = false;
-        btnRun.innerHTML = '<i class="fa-solid fa-play"></i> Run Cryptographic Security Audits';
+        btnRun.innerHTML = '<i class="fa-solid fa-play"></i> Run Security Audits';
         await this.refreshAllViews();
       }
     });
@@ -428,22 +579,17 @@ export class App {
 
     const notif = document.createElement('div');
     notif.className = `notification ${type}`;
-    
-    let icon = '<i class="fa-solid fa-circle-check"></i>';
-    if (type === 'error') icon = '<i class="fa-solid fa-circle-exclamation"></i>';
-    if (type === 'info') icon = '<i class="fa-solid fa-circle-info"></i>';
 
-    notif.innerHTML = `
-      ${icon}
-      <span>${message}</span>
-    `;
+    const icons: Record<string, string> = {
+      success: '<i class="fa-solid fa-circle-check"></i>',
+      error: '<i class="fa-solid fa-circle-exclamation"></i>',
+      info: '<i class="fa-solid fa-circle-info"></i>',
+    };
 
+    notif.innerHTML = `${icons[type] || icons.info}<span>${message}</span>`;
     container.appendChild(notif);
-    
-    // Slide in
+
     setTimeout(() => notif.classList.add('show'), 10);
-    
-    // Auto remove
     setTimeout(() => {
       notif.classList.remove('show');
       setTimeout(() => notif.remove(), 400);

@@ -26,10 +26,8 @@ export class VoterTerminal {
     this.campaignSelect = document.getElementById('select-campaign-vote') as HTMLSelectElement;
     this.selectedTitle = document.getElementById('vote-selected-title')!;
     this.radioContainer = document.getElementById('vote-candidate-radio-container')!;
-    
     this.existingVoteBox = document.getElementById('existing-vote-box')!;
     this.existingVoteCandidate = document.getElementById('existing-vote-candidate')!;
-    
     this.txPayloadBox = document.getElementById('vote-tx-payload')!;
     this.btnSubmitVote = document.getElementById('btn-submit-vote') as HTMLButtonElement;
   }
@@ -136,18 +134,132 @@ export class VoterTerminal {
   }
 
   /**
-   * Sync and render Voter Terminal
+   * Sync and render Voter Terminal with full state-based UX
    */
   render() {
+    const statusHeader = document.getElementById('voter-status-header')!;
+    const kycGate = document.getElementById('voter-kyc-gate')!;
+    const votingSection = document.getElementById('voter-voting-section')!;
     const contractAddr = this.app.selectedCampaignAddress;
-    
+
+    // Case 1: No wallet generated yet
+    if (!this.app.wallet) {
+      if (statusHeader) statusHeader.innerHTML = `
+        <div class="alert-box warning">
+          <i class="fa-solid fa-wallet"></i>
+          <div>
+            <strong>Wallet Required to Vote</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">You need a blockchain wallet to cast a vote. Go to <a href="#/profile" style="color: var(--color-primary); font-weight: 700;">My Profile</a> to generate your wallet and submit KYC verification.</p>
+          </div>
+        </div>
+      `;
+      if (kycGate) {
+        kycGate.style.display = 'flex';
+        kycGate.innerHTML = `
+          <div style="text-align: center; padding: 2rem; width: 100%;">
+            <i class="fa-solid fa-wallet" style="font-size: 2.5rem; color: var(--color-warning); display: block; margin-bottom: 0.75rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">No Wallet Connected</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Generate your blockchain wallet and complete KYC to participate in elections.</p>
+            <a href="#/profile" class="btn"><i class="fa-solid fa-arrow-right"></i> Go to My Profile</a>
+          </div>
+        `;
+      }
+      if (votingSection) votingSection.style.display = 'none';
+      this.selectedTitle.textContent = 'Wallet Required';
+      return;
+    }
+
+    const wallet = this.app.wallet;
+
+    // Case 2: KYC not submitted or not verified
+    const profile = this.app.blockchain.voterRegistry.get(wallet.address.toLowerCase());
+    if (!profile) {
+      if (statusHeader) statusHeader.innerHTML = `
+        <div class="alert-box info">
+          <i class="fa-solid fa-id-card"></i>
+          <div>
+            <strong>KYC Verification Required</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Submit your National Identity Card in <a href="#/profile" style="color: var(--color-primary); font-weight: 700;">My Profile</a> to get your identity verified before voting.</p>
+          </div>
+        </div>
+      `;
+      if (kycGate) {
+        kycGate.style.display = 'flex';
+        kycGate.innerHTML = `
+          <div style="text-align: center; padding: 2rem; width: 100%;">
+            <i class="fa-solid fa-id-card" style="font-size: 2.5rem; color: var(--color-primary); display: block; margin-bottom: 0.75rem;"></i>
+            <h3 style="margin-bottom: 0.5rem;">Identity Not Verified</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Submit your NIC for on-chain verification to unlock your voting rights.</p>
+            <a href="#/profile" class="btn"><i class="fa-solid fa-arrow-right"></i> Submit KYC in My Profile</a>
+          </div>
+        `;
+      }
+      if (votingSection) votingSection.style.display = 'none';
+      this.selectedTitle.textContent = 'KYC Required';
+      return;
+    }
+
+    if (profile.status === 'PENDING') {
+      if (statusHeader) statusHeader.innerHTML = `
+        <div class="alert-box warning">
+          <i class="fa-solid fa-hourglass-half"></i>
+          <div>
+            <strong>Identity Verification Pending</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your KYC application is under review. You will be able to vote once the verifier approves your identity.</p>
+          </div>
+        </div>
+      `;
+      if (kycGate) {
+        kycGate.style.display = 'flex';
+        kycGate.innerHTML = `
+          <div style="text-align: center; padding: 2rem; width: 100%;">
+            <i class="fa-solid fa-hourglass-half" style="font-size: 2.5rem; color: var(--color-warning); display: block; margin-bottom: 0.75rem; animation: spin 3s linear infinite;"></i>
+            <h3 style="margin-bottom: 0.5rem;">Audit in Progress</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem;">Please wait while the verifier reviews your identity submission.</p>
+          </div>
+        `;
+      }
+      if (votingSection) votingSection.style.display = 'none';
+      this.selectedTitle.textContent = 'Pending Verification';
+      return;
+    }
+
+    if (profile.status === 'REJECTED') {
+      if (statusHeader) statusHeader.innerHTML = `
+        <div class="alert-box danger">
+          <i class="fa-solid fa-circle-xmark"></i>
+          <div>
+            <strong>Identity Verification Rejected</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your KYC was rejected. Please re-submit with a clearer document in <a href="#/profile" style="color: var(--color-danger); font-weight: 700;">My Profile</a>.</p>
+          </div>
+        </div>
+      `;
+      if (kycGate) { kycGate.style.display = 'flex'; kycGate.innerHTML = ''; }
+      if (votingSection) votingSection.style.display = 'none';
+      this.selectedTitle.textContent = 'KYC Rejected';
+      return;
+    }
+
+    // Case 3: VERIFIED — Show voting terminal
+    if (statusHeader) statusHeader.innerHTML = `
+      <div class="alert-box success">
+        <i class="fa-solid fa-circle-check"></i>
+        <div>
+          <strong>Identity Verified — Ready to Vote</strong>
+          <p style="margin-top: 0.25rem; font-size: 0.82rem;">Select an election below, choose your candidate, and sign your ballot cryptographically.</p>
+        </div>
+      </div>
+    `;
+    if (kycGate) kycGate.style.display = 'none';
+    if (votingSection) votingSection.style.display = 'flex';
+
+    // No campaign selected
     if (!contractAddr) {
-      this.selectedTitle.textContent = 'No Election Selected';
-      this.radioContainer.innerHTML = '<p style="color: var(--color-text-muted);">Please select a campaign using the dropdown.</p>';
-      this.existingVoteBox.style.display = 'none';
-      this.txPayloadBox.textContent = 'Select candidate to generate payload...';
-      this.btnSubmitVote.disabled = true;
-      this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign & Cast Vote';
+      this.selectedTitle.textContent = 'Select an Election';
+      this.radioContainer.innerHTML = '<p style="color: var(--color-text-muted); padding: 0.5rem 0;">Use the dropdown above to select an active election campaign.</p>';
+      if (this.existingVoteBox) this.existingVoteBox.style.display = 'none';
+      if (this.txPayloadBox) this.txPayloadBox.textContent = 'Select a candidate to preview your ballot...';
+      if (this.btnSubmitVote) { this.btnSubmitVote.disabled = true; this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign & Cast Vote'; }
       return;
     }
 
@@ -155,107 +267,66 @@ export class VoterTerminal {
     const isEnded = Date.now() > contract.deadline;
     this.selectedTitle.textContent = `${contract.title} ${isEnded ? '❌ Ended' : '✅ Active'}`;
 
-    // Wallet checks
-    if (!this.app.wallet) {
-      this.radioContainer.innerHTML = '<p style="color: var(--color-danger);"><i class="fa-solid fa-wallet"></i> Wallet not generated. Access the "Profile Session" page to generate your cryptographic keys.</p>';
-      this.existingVoteBox.style.display = 'none';
-      this.btnSubmitVote.disabled = true;
-      this.btnSubmitVote.textContent = 'Wallet Disconnected';
-      return;
-    }
-
-    const wallet = this.app.wallet;
-    
-    // Check if voter registered and verified in KYC registry
-    const profile = this.app.blockchain.voterRegistry.get(wallet.address.toLowerCase());
-    const isVerified = profile ? profile.status === 'VERIFIED' : false;
-    if (!isVerified) {
-      this.radioContainer.innerHTML = '<p style="color: var(--color-danger);"><i class="fa-solid fa-circle-exclamation"></i> KYC Verification required. Please go to your "Profile Session" page to submit your identity card and wait for approval.</p>';
-      this.existingVoteBox.style.display = 'none';
-      this.btnSubmitVote.disabled = true;
-      this.btnSubmitVote.textContent = 'Verification Required';
-      return;
-    }
-
-    // Check if private and not whitelisted
+    // Check whitelist
     if (contract.isPrivate && !contract.whitelist.has(wallet.address.toLowerCase())) {
-      this.radioContainer.innerHTML = `<p style="color: var(--color-danger);"><i class="fa-solid fa-lock"></i> Restricted. Your address is not whitelisted for this election campaign.</p>`;
-      this.existingVoteBox.style.display = 'none';
-      this.btnSubmitVote.disabled = true;
-      this.btnSubmitVote.textContent = 'Not Whitelisted';
+      this.radioContainer.innerHTML = `<div class="alert-box danger"><i class="fa-solid fa-lock"></i><div><strong>Access Restricted</strong><p style="font-size:0.82rem;">Your address is not whitelisted for this election.</p></div></div>`;
+      if (this.btnSubmitVote) { this.btnSubmitVote.disabled = true; this.btnSubmitVote.textContent = 'Not Whitelisted'; }
       return;
     }
 
-    // Check if deadline passed
-    if (isEnded) {
-      this.btnSubmitVote.disabled = true;
-      this.btnSubmitVote.textContent = 'Election Deadline Passed';
-    } else {
-      this.btnSubmitVote.disabled = false;
+    // Deadline check
+    if (this.btnSubmitVote) {
+      this.btnSubmitVote.disabled = isEnded;
     }
 
-    // Read current selection of this voter from contract state
+    // Current vote
     const currentVote = contract.getVoterVote(wallet.address);
-    if (currentVote) {
-      this.existingVoteBox.style.display = 'block';
-      this.existingVoteCandidate.textContent = currentVote.candidateName;
-      this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-signature"></i> Cryptographically Sign & Modify Vote';
-    } else {
+    if (currentVote && this.existingVoteBox) {
+      this.existingVoteBox.style.display = 'flex';
+      if (this.existingVoteCandidate) this.existingVoteCandidate.textContent = currentVote.candidateName;
+      if (this.btnSubmitVote && !isEnded) this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-signature"></i> Sign & Modify Vote';
+    } else if (this.existingVoteBox) {
       this.existingVoteBox.style.display = 'none';
-      this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign & Cast Vote';
+      if (this.btnSubmitVote && !isEnded) this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign & Cast Vote';
     }
 
-    // Populate radio items
+    // Build candidate cards
+    const tallies = contract.getTallies();
     this.radioContainer.innerHTML = '';
     contract.candidates.forEach(cand => {
-      const wrapper = document.createElement('label');
-      wrapper.style.display = 'flex';
-      wrapper.style.alignItems = 'center';
-      wrapper.style.gap = '0.75rem';
-      wrapper.style.background = 'var(--bg-card)';
-      wrapper.style.padding = '0.75rem 1rem';
-      wrapper.style.borderRadius = '8px';
-      wrapper.style.cursor = 'pointer';
-      wrapper.style.border = '1px solid var(--border-color)';
-      wrapper.style.transition = 'var(--transition-smooth)';
-      
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'voter-choice';
-      radio.value = cand.name;
-      radio.style.accentColor = 'var(--color-primary)';
-      
-      // Auto-check if matches current choice
-      if (currentVote && currentVote.candidateName === cand.name) {
-        radio.checked = true;
-        wrapper.style.borderColor = 'var(--color-secondary)';
-        wrapper.style.boxShadow = '0 0 8px rgba(0, 245, 212, 0.15)';
-      }
+      const votes = tallies[cand.name] || 0;
+      const isSelected = currentVote?.candidateName === cand.name;
+      const initials = cand.name.split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase();
 
-      // Add radio changes trigger
+      const card = document.createElement('label');
+      card.className = `candidate-choice-card ${isSelected ? 'selected' : ''}`;
+
+      card.innerHTML = `
+        <input type="radio" name="voter-choice" value="${cand.name}" ${isSelected ? 'checked' : ''} />
+        <div class="candidate-choice-avatar">${initials}</div>
+        <div class="candidate-choice-info">
+          <div class="candidate-choice-name">${cand.name}</div>
+          <div class="candidate-choice-bio">${cand.bio || 'No manifesto provided.'}</div>
+        </div>
+        <div class="candidate-choice-tally">${votes} vote${votes !== 1 ? 's' : ''}</div>
+      `;
+
+      const radio = card.querySelector('input[type="radio"]') as HTMLInputElement;
       radio.addEventListener('change', () => {
-        // Reset borders
-        this.radioContainer.querySelectorAll('label').forEach(lbl => {
-          lbl.style.borderColor = 'var(--border-color)';
-          lbl.style.boxShadow = 'none';
-        });
-        wrapper.style.borderColor = 'var(--color-primary)';
-        wrapper.style.boxShadow = '0 0 8px rgba(157, 78, 221, 0.15)';
-        
+        this.radioContainer.querySelectorAll('.candidate-choice-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
         this.updateTxPayload(cand.name);
       });
 
-      wrapper.appendChild(radio);
-      wrapper.appendChild(document.createTextNode(cand.name));
-      this.radioContainer.appendChild(wrapper);
+      this.radioContainer.appendChild(card);
     });
 
-    // Update payload text initially if something checked
+    // Update payload if something checked
     const checkedRadio = this.radioContainer.querySelector('input[name="voter-choice"]:checked') as HTMLInputElement;
     if (checkedRadio) {
       this.updateTxPayload(checkedRadio.value);
-    } else {
-      this.txPayloadBox.textContent = 'Select candidate to generate payload...';
+    } else if (this.txPayloadBox) {
+      this.txPayloadBox.textContent = 'Select a candidate above to preview your ballot...';
     }
   }
 }

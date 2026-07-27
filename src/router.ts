@@ -3,14 +3,23 @@ import { App } from './main';
 export class Router {
   private app: App;
 
+  // Top-level layout containers
+  private loginScreen!: HTMLElement;
+  private adminLoginScreen!: HTMLElement;
+  private appLayout!: HTMLElement;
+
   constructor(app: App) {
     this.app = app;
+    this.loginScreen = document.getElementById('login-screen')!;
+    this.adminLoginScreen = document.getElementById('admin-login-screen')!;
+    this.appLayout = document.getElementById('app-layout')!;
+
     window.addEventListener('hashchange', () => this.handleRouting());
     window.addEventListener('load', () => this.handleRouting());
   }
 
   /**
-   * Evaluates location hash and activates correct page layout panel
+   * Evaluates location hash and activates the correct page layout
    */
   public handleRouting() {
     let hash = window.location.hash || '#/login';
@@ -18,152 +27,154 @@ export class Router {
     const isLoggedIn = this.app.activeUser !== null;
     const userRole = isLoggedIn ? this.app.activeUser!.role : null;
 
-    // 1. Enforce Gated Navigation Rules
+    // ── AUTH GATING ──────────────────────────────────────
     if (!isLoggedIn) {
+      // Non-logged-in users can only see login or admin/login screens
       if (hash !== '#/login' && hash !== '#/admin/login') {
         window.location.hash = '#/login';
         return;
       }
     } else {
-      // If logged in, protect role-based sections
-      if ((hash === '#/login' || hash === '#/admin/login')) {
-        if (userRole === 'ADMIN') window.location.hash = '#/admin';
-        else if (userRole === 'CANDIDATE') window.location.hash = '#/candidate';
-        else window.location.hash = '#/voter';
+      // Logged-in user tries to visit login → redirect to their home
+      if (hash === '#/login' || hash === '#/admin/login') {
+        this.redirectToRoleHome(userRole);
         return;
       }
 
+      // Role-based access control
       if (hash === '#/admin' && userRole !== 'ADMIN') {
-        this.app.showNotification('Access Denied: Admin role required.', 'error');
-        window.location.hash = userRole === 'CANDIDATE' ? '#/candidate' : '#/voter';
+        this.app.showNotification('Access Denied: Admin privileges required.', 'error');
+        this.redirectToRoleHome(userRole);
         return;
       }
 
       if (hash === '#/verifier' && userRole !== 'ADMIN') {
         this.app.showNotification('Access Denied: Verifier privileges required.', 'error');
-        window.location.hash = userRole === 'CANDIDATE' ? '#/candidate' : '#/voter';
+        this.redirectToRoleHome(userRole);
         return;
       }
 
       if (hash === '#/voter' && userRole !== 'VOTER') {
-        this.app.showNotification('Access Denied: Voter profile required.', 'error');
-        window.location.hash = userRole === 'ADMIN' ? '#/admin' : '#/candidate';
+        this.app.showNotification('Access Denied: Voter account required.', 'error');
+        this.redirectToRoleHome(userRole);
         return;
       }
 
       if (hash === '#/candidate' && userRole !== 'CANDIDATE') {
-        this.app.showNotification('Access Denied: Candidate profile required.', 'error');
-        window.location.hash = userRole === 'ADMIN' ? '#/admin' : '#/voter';
+        this.app.showNotification('Access Denied: Candidate account required.', 'error');
+        this.redirectToRoleHome(userRole);
         return;
       }
     }
 
-    // 2. Hide all panels first
+    // ── LAYOUT SWITCHING ─────────────────────────────────
+    const isLoginRoute = hash === '#/login';
+    const isAdminLoginRoute = hash === '#/admin/login';
+
+    // Show/hide top-level layout containers
+    this.loginScreen.classList.toggle('active', isLoginRoute);
+    this.adminLoginScreen.classList.toggle('active', isAdminLoginRoute);
+    this.appLayout.classList.toggle('active', !isLoginRoute && !isAdminLoginRoute && isLoggedIn);
+
+    if (isLoginRoute || isAdminLoginRoute) {
+      // Nothing else to do for login screens — they are self-contained
+      this.app.triggerPanelOnOpen(hash);
+      return;
+    }
+
+    // ── PANEL ROUTING (inside app layout) ────────────────
+    // Hide all panels
     const sections = document.querySelectorAll('.panel');
     sections.forEach(s => s.classList.remove('active'));
 
-    // 3. De-activate all nav items
+    // De-activate all nav items
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(n => n.classList.remove('active'));
 
-    // Map Hash to Panel ID
-    let panelId = 'login';
-    
-    switch (hash) {
-      case '#/':
-        panelId = 'welcome';
-        break;
-      case '#/login':
-        panelId = 'login';
-        break;
-      case '#/admin/login':
-        panelId = 'admin-login';
-        break;
-      case '#/voter':
-        panelId = 'voter-terminal';
-        break;
-      case '#/candidate':
-        panelId = 'candidate-portal';
-        break;
-      case '#/admin':
-        panelId = 'admin-panel';
-        break;
-      case '#/verifier':
-        panelId = 'verifier-portal';
-        break;
-      case '#/explorer':
-        panelId = 'explorer';
-        break;
-      case '#/tamper':
-        panelId = 'tamper';
-        break;
-      case '#/diagnostics':
-        panelId = 'diagnostics';
-        break;
-      default:
-        panelId = isLoggedIn ? 'welcome' : 'login';
-        break;
-    }
+    // Map hash → panel ID
+    const panelMap: Record<string, string> = {
+      '#/': 'welcome',
+      '#/voter': 'voter-terminal',
+      '#/candidate': 'candidate-portal',
+      '#/admin': 'admin-panel',
+      '#/verifier': 'verifier-portal',
+      '#/profile': 'profile',
+      '#/explorer': 'explorer',
+      '#/tamper': 'tamper',
+      '#/diagnostics': 'diagnostics',
+    };
 
-    // Show target section container
+    const panelId = panelMap[hash] ?? (isLoggedIn ? 'welcome' : 'login');
     const activeSection = document.getElementById(`panel-${panelId}`);
-    if (activeSection) {
-      activeSection.classList.add('active');
-    }
+    if (activeSection) activeSection.classList.add('active');
 
-    // Highlight correct navigation sidebar items
-    const matchingNavItem = document.querySelector(`.nav-item[href="${hash}"]`);
-    if (matchingNavItem) {
-      matchingNavItem.classList.add('active');
-    }
+    // Highlight matching nav item
+    const matchingNav = document.querySelector(`.nav-item[href="${hash}"]`);
+    if (matchingNav) matchingNav.classList.add('active');
 
-    // Sync menu items based on state changes (Login, logout, admin displays)
+    // Update sidebar & trigger panel-specific render
     this.updateNavigationSidebarLayout();
-
-    // Trigger state renders
     this.app.triggerPanelOnOpen(hash);
   }
 
+  private redirectToRoleHome(role: string | null) {
+    if (role === 'ADMIN') window.location.hash = '#/admin';
+    else if (role === 'CANDIDATE') window.location.hash = '#/candidate';
+    else window.location.hash = '#/voter';
+  }
+
   /**
-   * Shows or hides menu navigation triggers depending on active session state
+   * Shows/hides sidebar navigation items based on current session state
    */
   public updateNavigationSidebarLayout() {
     const isLoggedIn = this.app.activeUser !== null;
     const userRole = isLoggedIn ? this.app.activeUser!.role : null;
+    const user = this.app.activeUser;
 
-    // Elements
-    const navLogin = document.querySelector('.nav-item[href="#/login"]') as HTMLElement;
-    const navHome = document.querySelector('.nav-item[href="#/"]') as HTMLElement;
-    const navVoter = document.querySelector('.nav-item[href="#/voter"]') as HTMLElement;
-    const navCandidate = document.querySelector('.nav-item[href="#/candidate"]') as HTMLElement;
-    const navAdmin = document.querySelector('.nav-item[href="#/admin"]') as HTMLElement;
-    const navVerifier = document.querySelector('.nav-item[href="#/verifier"]') as HTMLElement;
-    const navExplorer = document.querySelector('.nav-item[href="#/explorer"]') as HTMLElement;
-    const navTamper = document.querySelector('.nav-item[href="#/tamper"]') as HTMLElement;
-    const navDiag = document.querySelector('.nav-item[href="#/diagnostics"]') as HTMLElement;
+    // Update sidebar user badge
+    const sidebarUsername = document.getElementById('sidebar-username');
+    const sidebarAvatar = document.getElementById('sidebar-avatar');
+    const sidebarRolePill = document.getElementById('sidebar-role-pill');
 
-    if (navLogin) {
-      if (isLoggedIn) {
-        navLogin.innerHTML = '<i class="fa-solid fa-circle-user"></i> Profile Session';
-        navLogin.style.color = 'var(--color-secondary)';
-      } else {
-        navLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login / Sign Up';
-        navLogin.style.color = '';
-      }
+    if (sidebarUsername && user) {
+      sidebarUsername.textContent = user.username;
     }
 
-    if (navHome) navHome.style.display = isLoggedIn ? 'flex' : 'none';
+    if (sidebarAvatar && user) {
+      const initials = (user.fullName || user.username)
+        .split(' ')
+        .map(n => n[0] || '')
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+      sidebarAvatar.textContent = initials;
+    }
+
+    if (sidebarRolePill && user) {
+      const roleIcons: Record<string, string> = {
+        VOTER: 'fa-square-poll-horizontal',
+        CANDIDATE: 'fa-user-tag',
+        ADMIN: 'fa-user-shield',
+      };
+      const roleClasses: Record<string, string> = {
+        VOTER: 'voter',
+        CANDIDATE: 'candidate',
+        ADMIN: 'admin',
+      };
+      sidebarRolePill.className = `sidebar-role-pill ${roleClasses[user.role] || 'voter'}`;
+      sidebarRolePill.innerHTML = `<i class="fa-solid ${roleIcons[user.role] || 'fa-user'}"></i> ${user.role}`;
+    }
+
+    // Role-specific nav items
+    const navVoter = document.getElementById('nav-voter');
+    const navCandidate = document.getElementById('nav-candidate');
+    const navAdmin = document.getElementById('nav-admin');
+    const navVerifier = document.getElementById('nav-verifier');
+
     if (navVoter) navVoter.style.display = (isLoggedIn && userRole === 'VOTER') ? 'flex' : 'none';
     if (navCandidate) navCandidate.style.display = (isLoggedIn && userRole === 'CANDIDATE') ? 'flex' : 'none';
-    
-    // Admin & Verifier screens visible only to Admin
     if (navAdmin) navAdmin.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
     if (navVerifier) navVerifier.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
-
-    // Explorer, Tamper, Diagnostics visible to all logged-in profiles
-    if (navExplorer) navExplorer.style.display = isLoggedIn ? 'flex' : 'none';
-    if (navTamper) navTamper.style.display = isLoggedIn ? 'flex' : 'none';
-    if (navDiag) navDiag.style.display = isLoggedIn ? 'flex' : 'none';
   }
 
   navigate(hash: string) {

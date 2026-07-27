@@ -13,7 +13,6 @@ export class LoginRegister {
   private signUpForm!: HTMLElement;
 
   // Login inputs
-  private anonymousView!: HTMLElement;
   private connectedView!: HTMLElement;
   private loginUsernameInput!: HTMLInputElement;
   private loginPasswordInput!: HTMLInputElement;
@@ -86,14 +85,14 @@ export class LoginRegister {
   // Neon Database holds all user session logs on server-side. No local seed required.
 
   private initElements() {
-    // Tabs
+    // Tabs (in the login screen)
     this.tabSignIn = document.getElementById('tab-btn-signin') as HTMLButtonElement;
     this.tabSignUp = document.getElementById('tab-btn-signup') as HTMLButtonElement;
     this.signInForm = document.getElementById('auth-signin-form')!;
     this.signUpForm = document.getElementById('auth-signup-form')!;
 
-    // Anonymous views
-    this.anonymousView = document.getElementById('login-anonymous-view')!;
+    // Anonymous views (login screen only)
+    // Connected view (profile panel)
     this.connectedView = document.getElementById('login-connected-view')!;
     this.loginUsernameInput = document.getElementById('login-username') as HTMLInputElement;
     this.loginPasswordInput = document.getElementById('login-password') as HTMLInputElement;
@@ -629,105 +628,120 @@ export class LoginRegister {
     }
   }
 
+  /** Called by sidebar sign-out button */
+  public triggerSignOut() {
+    this.handleSignOut();
+  }
+
   // --- RENDER LOGIC ---
   render() {
     const isLoggedIn = this.app.activeUser !== null;
-    if (!isLoggedIn) {
-      document.body.classList.add('logged-out');
-      this.anonymousView.style.display = 'flex';
-      this.connectedView.style.display = 'none';
-      return;
+    const currentHash = window.location.hash;
+    const isLoginScreen = currentHash === '#/login' || currentHash === '#/admin/login';
+    const isProfilePanel = currentHash === '#/profile';
+
+    // If on login screen and not logged in — show login forms
+    if (isLoginScreen && !isLoggedIn) {
+      return; // login screen HTML is always visible, no action needed
     }
 
-    document.body.classList.remove('logged-out');
-    this.anonymousView.style.display = 'none';
-    this.connectedView.style.display = 'flex';
+    // If on profile panel and logged in — show connected view
+    if (isProfilePanel && isLoggedIn) {
+      if (this.connectedView) this.connectedView.style.display = 'flex';
+      this.renderProfileConnected();
+    }
+  }
 
-    const user = this.app.activeUser!;
-    this.sessUsername.textContent = user.username;
-    this.sessFullname.textContent = user.fullName;
-    this.sessEmail.textContent = user.email;
-    this.sessRole.textContent = user.role;
+  private renderProfileConnected() {
+    if (!this.app.activeUser) return;
 
-    // Wallet generation subviews check
+    const user = this.app.activeUser;
+
+    // Update profile fields
+    if (this.sessUsername) this.sessUsername.textContent = user.username;
+    if (this.sessFullname) this.sessFullname.textContent = user.fullName;
+    if (this.sessEmail) this.sessEmail.textContent = user.email;
+
+    // Update role badge
+    if (this.sessRole) {
+      const roleClasses: Record<string, string> = { VOTER: 'verified', CANDIDATE: 'unverified', ADMIN: 'unverified' };
+      const roleColors: Record<string, string> = { VOTER: '', CANDIDATE: 'color: var(--color-primary); border-color: rgba(157,78,221,0.3); background: rgba(157,78,221,0.1);', ADMIN: 'color: var(--color-warning); border-color: rgba(255,183,0,0.3); background: rgba(255,183,0,0.08);' };
+      this.sessRole.className = `status-badge ${roleClasses[user.role] || 'verified'}`;
+      this.sessRole.style.cssText = roleColors[user.role] || '';
+      this.sessRole.textContent = user.role;
+    }
+
+    // Wallet section
     const hasWallet = this.app.wallet !== null;
     if (!hasWallet) {
-      this.walletDisconnectedSubview.style.display = 'flex';
-      this.walletConnectedSubview.style.display = 'none';
+      if (this.walletDisconnectedSubview) this.walletDisconnectedSubview.style.display = 'flex';
+      if (this.walletConnectedSubview) this.walletConnectedSubview.style.display = 'none';
       return;
     }
 
-    this.walletDisconnectedSubview.style.display = 'none';
-    this.walletConnectedSubview.style.display = 'flex';
+    if (this.walletDisconnectedSubview) this.walletDisconnectedSubview.style.display = 'none';
+    if (this.walletConnectedSubview) this.walletConnectedSubview.style.display = 'flex';
 
     const w = this.app.wallet!;
-    this.sessWalletAddress.textContent = w.address;
-    this.pubkeyHexArea.value = w.publicKeyHex;
-    this.privkeyHexArea.value = w.privateKeyHex;
+    if (this.sessWalletAddress) this.sessWalletAddress.textContent = w.address;
+    if (this.pubkeyHexArea) this.pubkeyHexArea.value = w.publicKeyHex;
+    if (this.privkeyHexArea) this.privkeyHexArea.value = w.privateKeyHex;
 
-    // Toggle faucet button based on roles (all users can claim faucet, but only if they need gas)
-    this.btnLoginClaimFaucet.style.display = 'block';
+    // Faucet button
+    if (this.btnLoginClaimFaucet) this.btnLoginClaimFaucet.style.display = 'block';
 
-    // Sync KYC status views
+    // KYC status
     const profile = this.app.blockchain.voterRegistry.get(w.address.toLowerCase());
-    
-    // Bio element role toggle
-    if (user.role === 'CANDIDATE') {
-      this.regBioGroup.style.display = 'flex';
-    } else {
-      this.regBioGroup.style.display = 'none';
+
+    // Candidate bio field visibility
+    if (this.regBioGroup) {
+      this.regBioGroup.style.display = user.role === 'CANDIDATE' ? 'flex' : 'none';
     }
 
     if (!profile || this.isEditing) {
-      // Form submission layout
-      this.kycRegistrationSubview.style.display = 'flex';
-      this.kycCompletedSubview.style.display = 'none';
-      
+      if (this.kycRegistrationSubview) this.kycRegistrationSubview.style.display = 'flex';
+      if (this.kycCompletedSubview) this.kycCompletedSubview.style.display = 'none';
+
       if (profile && this.isEditing) {
-        this.regBioText.value = profile.bio || '';
+        if (this.regBioText) this.regBioText.value = profile.bio || '';
         this.uploadedImageUrl = profile.nicPhoto;
-        this.previewImage.src = profile.nicPhoto;
-        this.previewBox.style.display = 'flex';
-        this.fileNameText.textContent = 'Recycled current photo';
-        this.uploadStatusText.textContent = 'Current photo loaded. Re-upload drag zone optional.';
+        if (this.previewImage) this.previewImage.src = profile.nicPhoto;
+        if (this.previewBox) this.previewBox.style.display = 'flex';
+        if (this.fileNameText) this.fileNameText.textContent = 'Current photo loaded.';
+        if (this.uploadStatusText) this.uploadStatusText.textContent = 'Drag a new image to replace.';
       }
     } else {
-      // Submitted layout
-      this.kycRegistrationSubview.style.display = 'none';
-      this.kycCompletedSubview.style.display = 'flex';
+      if (this.kycRegistrationSubview) this.kycRegistrationSubview.style.display = 'none';
+      if (this.kycCompletedSubview) this.kycCompletedSubview.style.display = 'flex';
 
-      const badge = this.sessKycStatusBadge;
-      badge.className = '';
-      badge.style.display = 'inline-flex';
-
-      if (profile.status === 'VERIFIED') {
-        badge.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--color-secondary);"></i> Verified On-Chain';
-        badge.style.color = 'var(--color-secondary)';
-      } else if (profile.status === 'REJECTED') {
-        badge.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color: var(--color-danger);"></i> Application Rejected';
-        badge.style.color = 'var(--color-danger)';
-      } else {
-        badge.innerHTML = '<i class="fa-solid fa-hourglass-half" style="color: var(--color-primary);"></i> Audit Pending';
-        badge.style.color = 'var(--color-primary)';
+      if (this.sessKycStatusBadge) {
+        const badge = this.sessKycStatusBadge;
+        if (profile.status === 'VERIFIED') {
+          badge.innerHTML = '<span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> Verified On-Chain</span>';
+        } else if (profile.status === 'REJECTED') {
+          badge.innerHTML = '<span class="status-badge rejected"><i class="fa-solid fa-circle-xmark"></i> Application Rejected</span>';
+        } else {
+          badge.innerHTML = '<span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> Audit Pending</span>';
+        }
       }
 
-      this.submittedDetailsBox.innerHTML = `
-        <div><strong>Name on Record:</strong> ${profile.name}</div>
-        <div><strong>Email Address:</strong> ${profile.email}</div>
-        <div><strong>Registered Role:</strong> ${profile.role}</div>
-        ${profile.bio ? `<div><strong>Manifesto:</strong> "${profile.bio}"</div>` : ''}
-        <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
-          <strong>NIC ID Card File:</strong>
-          <img src="${profile.nicPhoto}" alt="NIC" style="width: 100%; max-height: 120px; object-fit: contain; border: 1px solid var(--border-color); background: var(--bg-main);" />
-        </div>
-        <button id="btn-edit-profile" class="btn btn-secondary" style="margin-top: 0.75rem; font-size: 0.8rem; padding: 0.4rem 0.75rem;"><i class="fa-solid fa-user-pen"></i> Edit Profile Details</button>
-      `;
-
-      // Bind edit button click handler
-      document.getElementById('btn-edit-profile')?.addEventListener('click', () => {
-        this.isEditing = true;
-        this.render();
-      });
+      if (this.submittedDetailsBox) {
+        this.submittedDetailsBox.innerHTML = `
+          <div class="profile-data-row"><span class="profile-data-label">Name on Record</span><span class="profile-data-value">${profile.name}</span></div>
+          <div class="profile-data-row"><span class="profile-data-label">Email</span><span class="profile-data-value">${profile.email}</span></div>
+          <div class="profile-data-row"><span class="profile-data-label">Role</span><span class="profile-data-value">${profile.role}</span></div>
+          ${profile.bio ? `<div class="profile-data-row"><span class="profile-data-label">Manifesto</span><span class="profile-data-value" title="${profile.bio}" style="max-width: 50%; white-space: normal;">${profile.bio.substring(0, 80)}${profile.bio.length > 80 ? '...' : ''}</span></div>` : ''}
+          <div style="margin-top: 0.5rem;">
+            <span class="profile-data-label">NIC Document</span>
+            <img src="${profile.nicPhoto}" alt="NIC" style="width: 100%; max-height: 140px; object-fit: contain; background: var(--bg-main); border: 1px solid var(--border-color); margin-top: 0.4rem; display: block;" />
+          </div>
+          <button id="btn-edit-profile" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;"><i class="fa-solid fa-user-pen"></i> Edit KYC Details</button>
+        `;
+        document.getElementById('btn-edit-profile')?.addEventListener('click', () => {
+          this.isEditing = true;
+          this.render();
+        });
+      }
     }
   }
 }
