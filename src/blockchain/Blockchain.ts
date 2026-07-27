@@ -18,7 +18,7 @@ export class Blockchain {
     email: string;
     nicPhoto: string;
     status: 'PENDING' | 'VERIFIED' | 'REJECTED';
-    role: 'VOTER' | 'CANDIDATE';
+    role: 'VOTER' | 'CANDIDATE' | 'ADMIN';
     bio?: string;
   }> = new Map();
 
@@ -33,7 +33,7 @@ export class Blockchain {
       email: 'admin@votechain.net',
       nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
       status: 'VERIFIED',
-      role: 'VOTER'
+      role: 'ADMIN'
     });
 
     // Pre-seed Demo Voter
@@ -58,6 +58,9 @@ export class Blockchain {
       role: 'CANDIDATE',
       bio: 'Committed to absolute on-chain auditing and open data governance.'
     });
+
+    // Load persisted state from localStorage
+    this.loadState();
   }
 
   /**
@@ -202,6 +205,7 @@ export class Blockchain {
 
     // Add to pending transactions queue
     this.pendingTransactions.push(transaction);
+    this.saveState();
   }
 
   /**
@@ -233,6 +237,7 @@ export class Blockchain {
     // Reward the miner (could be a simple record)
     console.log(`Block #${blockIndex} mined successfully by ${minerAddress}. Hash: ${newBlock.hash}`);
     
+    this.saveState();
     return newBlock;
   }
 
@@ -535,6 +540,123 @@ export class Blockchain {
     } catch (e) {
       console.error('State replay validation crashed:', e);
       return false;
+    }
+  }
+
+  public saveState(): void {
+    try {
+      const data = {
+        chain: this.chain.map(b => ({
+          index: b.index,
+          timestamp: b.timestamp,
+          transactions: b.transactions.map(t => ({
+            sender: t.sender,
+            recipient: t.recipient,
+            type: t.type,
+            payload: t.payload,
+            nonce: t.nonce,
+            timestamp: t.timestamp,
+            publicKey: t.publicKey,
+            signature: t.signature
+          })),
+          previousHash: b.previousHash,
+          hash: b.hash,
+          nonce: b.nonce
+        })),
+        pendingTransactions: this.pendingTransactions.map(t => ({
+          sender: t.sender,
+          recipient: t.recipient,
+          type: t.type,
+          payload: t.payload,
+          nonce: t.nonce,
+          timestamp: t.timestamp,
+          publicKey: t.publicKey,
+          signature: t.signature
+        })),
+        nonces: Array.from(this.nonces.entries()),
+        verifiedAddresses: Array.from(this.verifiedAddresses),
+        voterRegistry: Array.from(this.voterRegistry.entries()),
+        contracts: Array.from(this.contracts.entries()).map(([address, contract]) => ({
+          address,
+          creator: contract.creator,
+          title: contract.title,
+          description: contract.description,
+          candidates: contract.candidates,
+          deadline: contract.deadline,
+          isPrivate: contract.isPrivate,
+          whitelist: Array.from(contract.whitelist),
+          votes: Array.from(contract.votes.entries()),
+          status: contract.status,
+          candidateApplicants: contract.candidateApplicants
+        }))
+      };
+      localStorage.setItem('votechain_ledger', JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to save blockchain state:', e);
+    }
+  }
+
+  public loadState(): void {
+    try {
+      const stored = localStorage.getItem('votechain_ledger');
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored);
+      if (!parsed) return;
+
+      // Reconstruct nonces
+      if (Array.isArray(parsed.nonces)) {
+        this.nonces = new Map(parsed.nonces);
+      }
+      // Reconstruct verifiedAddresses
+      if (Array.isArray(parsed.verifiedAddresses)) {
+        this.verifiedAddresses = new Set(parsed.verifiedAddresses);
+      }
+      // Reconstruct voterRegistry
+      if (Array.isArray(parsed.voterRegistry)) {
+        this.voterRegistry = new Map(parsed.voterRegistry);
+      }
+      // Reconstruct contracts
+      if (Array.isArray(parsed.contracts)) {
+        this.contracts = new Map(parsed.contracts.map((c: any) => {
+          const contract = new ElectionContract(
+            c.address,
+            c.creator,
+            c.title,
+            c.description,
+            c.candidates,
+            c.deadline,
+            c.isPrivate,
+            c.whitelist
+          );
+          contract.status = c.status || 'PRE_REGISTRATION';
+          contract.candidateApplicants = c.candidateApplicants || [];
+          if (Array.isArray(c.votes)) {
+            contract.votes = new Map(c.votes);
+          }
+          return [c.address, contract];
+        }));
+      }
+
+      // Reconstruct chain
+      if (Array.isArray(parsed.chain)) {
+        this.chain = parsed.chain.map((blockData: any) => {
+          const txs = blockData.transactions.map((t: any) => new Transaction(t));
+          const block = new Block(blockData.index, txs, blockData.previousHash);
+          block.timestamp = blockData.timestamp;
+          block.hash = blockData.hash;
+          block.nonce = blockData.nonce;
+          return block;
+        });
+      }
+
+      // Reconstruct pendingTransactions
+      if (Array.isArray(parsed.pendingTransactions)) {
+        this.pendingTransactions = parsed.pendingTransactions.map((t: any) => new Transaction(t));
+      }
+
+    } catch (e) {
+      console.error('Failed to load blockchain state:', e);
     }
   }
 }

@@ -46,6 +46,20 @@ export class VerifierPortal {
       // Broadcast transaction
       await this.app.blockchain.addTransaction(tx);
 
+      // Sync verification status to Neon database
+      try {
+        await fetch('/api/verify-kyc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetAddress,
+            approved
+          })
+        });
+      } catch (err) {
+        console.warn('Database verification sync failed:', err);
+      }
+
       this.app.showNotification(
         approved 
           ? 'KYC verification approved! Transaction queued in mempool.' 

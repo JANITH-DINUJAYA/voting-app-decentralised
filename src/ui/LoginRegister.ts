@@ -365,6 +365,27 @@ export class LoginRegister {
       const w = new Wallet();
       await w.importFromHex(profile.walletPrivateKey, profile.walletPublicKey);
       this.app.wallet = w;
+
+      // Sync database profile KYC status back to blockchain if missing on-chain
+      if (profile.walletAddress && profile.kycStatus && profile.kycStatus !== 'UNSUBMITTED') {
+        const addr = profile.walletAddress.toLowerCase();
+        const onChainProfile = this.app.blockchain.voterRegistry.get(addr);
+        if (!onChainProfile) {
+          this.app.blockchain.voterRegistry.set(addr, {
+            name: profile.fullName,
+            email: profile.email,
+            nicPhoto: profile.nicPhoto || 'https://via.placeholder.com/400x250?text=Loaded+From+Database',
+            status: profile.kycStatus as any,
+            role: profile.role === 'ADMIN' ? 'VOTER' : (profile.role as any),
+            bio: profile.bio || ''
+          });
+
+          if (profile.kycStatus === 'VERIFIED') {
+            this.app.blockchain.verifiedAddresses.add(addr);
+          }
+          this.app.blockchain.saveState();
+        }
+      }
     } else {
       this.app.wallet = null;
     }
@@ -569,6 +590,27 @@ export class LoginRegister {
           throw new Error('Image URL missing in ImgBB response.');
         }
       }
+
+      // 1.5 Save to Neon DB
+      this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving to Neon Database...';
+      const dbResponse = await fetch('/api/update-kyc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: activeUser.username,
+          nicPhoto: this.uploadedImageUrl,
+          bio: bio || ''
+        })
+      });
+      const dbData = await dbResponse.json();
+      if (!dbResponse.ok) {
+        throw new Error(dbData.error || 'Failed to save KYC credentials to database.');
+      }
+
+      // Update session details
+      this.app.activeUser.nicPhoto = this.uploadedImageUrl;
+      this.app.activeUser.kycStatus = 'PENDING';
+      this.app.activeUser.bio = bio || '';
 
       // 2. Build Transaction
       this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing KYC Registry...';

@@ -19,6 +19,9 @@ export interface UserProfile {
   walletPrivateKey?: string;
   walletPublicKey?: string;
   walletAddress?: string;
+  nicPhoto?: string;
+  kycStatus?: string;
+  bio?: string;
 }
 
 export class App {

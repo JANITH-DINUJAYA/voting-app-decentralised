@@ -24,7 +24,10 @@ export default async function handler(req, res) {
         email, 
         wallet_address as "walletAddress", 
         wallet_private_key as "walletPrivateKey", 
-        wallet_public_key as "walletPublicKey"
+        wallet_public_key as "walletPublicKey",
+        nic_photo as "nicPhoto",
+        kyc_status as "kycStatus",
+        bio
       FROM users 
       WHERE LOWER(username) = ${username.toLowerCase()} AND password_hash = ${password}
     `;
