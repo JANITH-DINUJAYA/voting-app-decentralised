@@ -79,49 +79,11 @@ export class LoginRegister {
 
   constructor(app: App) {
     this.app = app;
-    this.seedUsersDatabase();
     this.initElements();
     this.initEvents();
   }
 
-  private seedUsersDatabase() {
-    const existing = localStorage.getItem('votechain_users');
-    if (!existing) {
-      const defaultUsers: Record<string, UserProfile & { passwordHash: string }> = {
-        admin: {
-          username: 'admin',
-          passwordHash: 'admin', // Demo simple password match
-          role: 'ADMIN',
-          fullName: 'System Administrator',
-          email: 'admin@votechain.net',
-          walletAddress: '0xe513658465d6997d28be6460851b77dc703bf13a',
-          walletPrivateKey: '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042013c369ba077f7a330f47615b5e75248e53187fd49eed9df27205c24edf072b2aa14403420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9',
-          walletPublicKey: '3059301306072a8648ce3d020106082a8648ce3d03010703420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9'
-        },
-        voter: {
-          username: 'voter',
-          passwordHash: 'voter',
-          role: 'VOTER',
-          fullName: 'Demo Voter Profile',
-          email: 'voter@votechain.net',
-          walletAddress: '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91',
-          walletPrivateKey: '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042037d182389d0763c9898910cef4b767b083c6a1588565021e32e022851608f2c6a14403420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1',
-          walletPublicKey: '3059301306072a8648ce3d020106082a8648ce3d03010703420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1'
-        },
-        candidate: {
-          username: 'candidate',
-          passwordHash: 'candidate',
-          role: 'CANDIDATE',
-          fullName: 'Demo Candidate platform',
-          email: 'candidate@votechain.net',
-          walletAddress: '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb',
-          walletPrivateKey: '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b0201010420bbad54903c36aa68d8705d620444ee2e2ffacc4fc53fbf5fbd531573781ad342a14403420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9',
-          walletPublicKey: '3059301306072a8648ce3d020106082a8648ce3d03010703420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9'
-        }
-      };
-      localStorage.setItem('votechain_users', JSON.stringify(defaultUsers));
-    }
-  }
+  // Neon Database holds all user session logs on server-side. No local seed required.
 
   private initElements() {
     // Tabs
@@ -257,7 +219,7 @@ export class LoginRegister {
   }
 
   // --- MOCK AUTHENTICATION SYSTEM ---
-  private handleSignIn() {
+  private async handleSignIn() {
     const username = this.loginUsernameInput.value.trim().toLowerCase();
     const password = this.loginPasswordInput.value.trim();
 
@@ -271,19 +233,32 @@ export class LoginRegister {
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
-    const user = users[username];
+    try {
+      this.btnLoginAuth.disabled = true;
+      this.btnLoginAuth.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging in...';
 
-    if (!user || user.passwordHash !== password) {
-      this.app.showNotification('Invalid username or password credentials.', 'error');
-      return;
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Login credentials incorrect.');
+      }
+
+      await this.authenticateSession(data);
+
+    } catch (e: any) {
+      this.app.showNotification(e.message, 'error');
+    } finally {
+      this.btnLoginAuth.disabled = false;
+      this.btnLoginAuth.innerHTML = '<i class="fa-solid fa-circle-check"></i> Log In';
     }
-
-    // Success Authentication
-    this.authenticateSession(user);
   }
 
-  private handleSignUp() {
+  private async handleSignUp() {
     const username = this.registerUsernameInput.value.trim().toLowerCase();
     const password = this.registerPasswordInput.value.trim();
     const fullName = this.registerFullnameInput.value.trim();
@@ -300,29 +275,35 @@ export class LoginRegister {
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
-    if (users[username]) {
-      this.app.showNotification('Username already registered.', 'error');
-      return;
+    try {
+      this.btnRegisterAuth.disabled = true;
+      this.btnRegisterAuth.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registering...';
+
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, fullName, email, role })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed.');
+      }
+
+      this.app.showNotification('Account created successfully! Logging you in...', 'success');
+      this.registerUsernameInput.value = '';
+      this.registerPasswordInput.value = '';
+      this.registerFullnameInput.value = '';
+      this.registerEmailInput.value = '';
+
+      await this.authenticateSession(data);
+
+    } catch (e: any) {
+      this.app.showNotification(e.message, 'error');
+    } finally {
+      this.btnRegisterAuth.disabled = false;
+      this.btnRegisterAuth.innerHTML = '<i class="fa-solid fa-circle-check"></i> Register Account';
     }
-
-    // Save account
-    users[username] = {
-      username,
-      passwordHash: password,
-      role,
-      fullName,
-      email
-    };
-    localStorage.setItem('votechain_users', JSON.stringify(users));
-
-    this.app.showNotification('Account created successfully! Logging you in...', 'success');
-    this.registerUsernameInput.value = '';
-    this.registerPasswordInput.value = '';
-    this.registerFullnameInput.value = '';
-    this.registerEmailInput.value = '';
-
-    this.authenticateSession(users[username]);
   }
 
   private async handleAdminKeyLogin() {
@@ -429,20 +410,32 @@ export class LoginRegister {
       await w.generate();
       this.app.wallet = w;
 
-      // Persist the new wallet parameters in simulated user database
-      const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
       const activeUser = this.app.activeUser;
-      if (users[activeUser.username]) {
-        users[activeUser.username].walletPrivateKey = w.privateKeyHex;
-        users[activeUser.username].walletPublicKey = w.publicKeyHex;
-        users[activeUser.username].walletAddress = w.address;
-        
-        // Sync local app state
-        this.app.activeUser = users[activeUser.username];
-        localStorage.setItem('votechain_users', JSON.stringify(users));
+      
+      const response = await fetch('/api/update-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: activeUser.username,
+          walletAddress: w.address,
+          walletPrivateKey: w.privateKeyHex,
+          walletPublicKey: w.publicKeyHex
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to bind keys.');
       }
 
-      this.app.showNotification('Asymmetric keypair generated via Web Crypto API!', 'success');
+      this.app.activeUser = {
+        ...activeUser,
+        walletAddress: w.address,
+        walletPrivateKey: w.privateKeyHex,
+        walletPublicKey: w.publicKeyHex
+      };
+
+      this.app.showNotification('Wallet generated and linked to Neon database profile!', 'success');
       this.app.refreshAllViews();
     } catch (e: any) {
       this.app.showNotification(`Key generation failed: ${e.message}`, 'error');
