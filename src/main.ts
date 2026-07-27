@@ -81,6 +81,7 @@ export class App {
         this.renderWelcomeHub();
         break;
       case '#/login':
+      case '#/admin/login':
         this.loginRegister.render();
         break;
       case '#/voter':

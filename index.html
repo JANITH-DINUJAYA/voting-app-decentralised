@@ -190,15 +190,10 @@
                 <button id="btn-register-auth" class="btn btn-secondary"><i class="fa-solid fa-circle-check"></i> Register Account</button>
               </div>
 
-              <!-- Quick Sandbox Logins Info Box -->
-              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted);">Quick Demo Sandbox Logins (Click to Log In)</span>
-                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
-                  <button id="btn-demo-admin" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.45rem;"><i class="fa-solid fa-user-shield"></i> Admin</button>
-                  <button id="btn-demo-voter" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.45rem;"><i class="fa-solid fa-check-to-slot"></i> Voter</button>
-                  <button id="btn-demo-candidate" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.45rem;"><i class="fa-solid fa-user-tag"></i> Candidate</button>
-                </div>
-                <span style="font-size: 0.7rem; color: var(--color-text-muted); text-align: center;">Credentials: admin/admin, voter/voter, candidate/candidate</span>
+              <!-- Admin Key Link -->
+              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; text-align: center; font-size: 0.8rem; margin-top: 0.5rem;">
+                <span style="color: var(--color-text-muted);">System Administrators:</span>
+                <a href="#/admin/login" style="color: var(--color-secondary); text-decoration: none; font-weight: 700; margin-left: 0.25rem;"><i class="fa-solid fa-key"></i> Authenticate with Private Key</a>
               </div>
             </div>
 
@@ -308,6 +303,32 @@
               </div>
 
               <button id="btn-login-disconnect" class="btn btn-danger" style="margin-top: 1rem; width: fit-content;"><i class="fa-solid fa-unlink"></i> Sign Out Account</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 2A: Admin Cryptographic Key Login -->
+        <section id="panel-admin-login" class="panel">
+          <div class="card" style="border: 1px solid rgba(0, 245, 212, 0.3);">
+            <h2 class="card-title" style="color: var(--color-secondary);"><i class="fa-solid fa-user-shield"></i> Admin Access Portal</h2>
+            <p class="card-subtitle">Provide your administrative cryptographic private key (PKCS8 hex) to authenticate and access the system verifier node.</p>
+            
+            <div class="form-group" style="gap: 1.25rem; margin-top: 0.5rem;">
+              <div class="form-group">
+                <label for="admin-login-key">Admin Private Key Hex (PKCS8 format)</label>
+                <input type="text" id="admin-login-key" placeholder="Paste administrative private key hex here..." style="border-color: rgba(0, 245, 212, 0.2); color: var(--color-secondary);" />
+              </div>
+
+              <button id="btn-admin-login-submit" class="btn" style="background: var(--color-secondary); border-color: var(--color-secondary); color: var(--bg-main);"><i class="fa-solid fa-shield-halved"></i> Verify Cryptographic Key</button>
+
+              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; text-align: center;">
+                <span style="font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 0.5rem;">Demo Testing Tool:</span>
+                <button id="btn-demo-admin-key" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.5rem;"><i class="fa-solid fa-laptop-code"></i> Connect Demo Admin Key</button>
+              </div>
+
+              <div style="text-align: center; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; font-size: 0.85rem;">
+                <a href="#/login" style="color: var(--color-primary); text-decoration: none; font-weight: 600;"><i class="fa-solid fa-arrow-left-long"></i> Back to User Portal</a>
+              </div>
             </div>
           </div>
         </section>

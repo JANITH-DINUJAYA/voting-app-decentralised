@@ -20,15 +20,16 @@ export class Router {
 
     // 1. Enforce Gated Navigation Rules
     if (!isLoggedIn) {
-      if (hash !== '#/login') {
+      if (hash !== '#/login' && hash !== '#/admin/login') {
         window.location.hash = '#/login';
         return;
       }
     } else {
       // If logged in, protect role-based sections
-      if (hash === '#/login' && userRole === 'ADMIN') {
-        // Redirect Admin away from login screen to admin dashboard
-        window.location.hash = '#/admin';
+      if ((hash === '#/login' || hash === '#/admin/login')) {
+        if (userRole === 'ADMIN') window.location.hash = '#/admin';
+        else if (userRole === 'CANDIDATE') window.location.hash = '#/candidate';
+        else window.location.hash = '#/voter';
         return;
       }
 
@@ -74,6 +75,9 @@ export class Router {
         break;
       case '#/login':
         panelId = 'login';
+        break;
+      case '#/admin/login':
+        panelId = 'admin-login';
         break;
       case '#/voter':
         panelId = 'voter-terminal';

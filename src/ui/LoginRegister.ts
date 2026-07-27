@@ -27,10 +27,10 @@ export class LoginRegister {
   private registerRoleSelect!: HTMLSelectElement;
   private btnRegisterAuth!: HTMLButtonElement;
 
-  // Demo buttons
-  private btnDemoAdmin!: HTMLButtonElement;
-  private btnDemoVoter!: HTMLButtonElement;
-  private btnDemoCandidate!: HTMLButtonElement;
+  // Admin Login inputs
+  private adminLoginKeyInput!: HTMLInputElement;
+  private btnAdminLoginSubmit!: HTMLButtonElement;
+  private btnDemoAdminKey!: HTMLButtonElement;
 
   // Active Session display
   private sessUsername!: HTMLElement;
@@ -145,10 +145,10 @@ export class LoginRegister {
     this.registerRoleSelect = document.getElementById('register-role-select') as HTMLSelectElement;
     this.btnRegisterAuth = document.getElementById('btn-register-auth') as HTMLButtonElement;
 
-    // Demo buttons
-    this.btnDemoAdmin = document.getElementById('btn-demo-admin') as HTMLButtonElement;
-    this.btnDemoVoter = document.getElementById('btn-demo-voter') as HTMLButtonElement;
-    this.btnDemoCandidate = document.getElementById('btn-demo-candidate') as HTMLButtonElement;
+    // Admin Login inputs
+    this.adminLoginKeyInput = document.getElementById('admin-login-key') as HTMLInputElement;
+    this.btnAdminLoginSubmit = document.getElementById('btn-admin-login-submit') as HTMLButtonElement;
+    this.btnDemoAdminKey = document.getElementById('btn-demo-admin-key') as HTMLButtonElement;
 
     // Connected views
     this.sessUsername = document.getElementById('sess-username')!;
@@ -202,10 +202,9 @@ export class LoginRegister {
     this.btnRegisterAuth.addEventListener('click', () => this.handleSignUp());
     this.btnDisconnect.addEventListener('click', () => this.handleSignOut());
 
-    // Demo Logins
-    this.btnDemoAdmin.addEventListener('click', () => this.quickLogin('admin', 'admin'));
-    this.btnDemoVoter.addEventListener('click', () => this.quickLogin('voter', 'voter'));
-    this.btnDemoCandidate.addEventListener('click', () => this.quickLogin('candidate', 'candidate'));
+    // Admin login events
+    this.btnAdminLoginSubmit.addEventListener('click', () => this.handleAdminKeyLogin());
+    this.btnDemoAdminKey.addEventListener('click', () => this.loadDemoAdminKey());
 
     // Wallet Generation & Claim Faucet
     this.btnProfileGenerateWallet.addEventListener('click', () => this.generateWalletPostLogin());
@@ -267,6 +266,11 @@ export class LoginRegister {
       return;
     }
 
+    if (username === 'admin') {
+      this.app.showNotification('Administrative accounts must authenticate via the Cryptographic Key Portal.', 'error');
+      return;
+    }
+
     const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
     const user = users[username];
 
@@ -321,10 +325,56 @@ export class LoginRegister {
     this.authenticateSession(users[username]);
   }
 
-  private quickLogin(username: string, pass: string) {
-    this.loginUsernameInput.value = username;
-    this.loginPasswordInput.value = pass;
-    this.handleSignIn();
+  private async handleAdminKeyLogin() {
+    const keyHex = this.adminLoginKeyInput.value.trim();
+    if (!keyHex) {
+      this.app.showNotification('Please enter the Admin Private Key Hex.', 'error');
+      return;
+    }
+
+    try {
+      this.btnAdminLoginSubmit.disabled = true;
+      this.btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying Key...';
+
+      // The admin public key corresponding to our preset private key:
+      const adminPubKeyHex = '3059301306072a8648ce3d020106082a8648ce3d03010703420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9';
+
+      const w = new Wallet();
+      await w.importFromHex(keyHex, adminPubKeyHex);
+
+      const adminAddress = this.app.blockchain.adminAddress;
+      if (w.address.toLowerCase() !== adminAddress.toLowerCase()) {
+        throw new Error('Imported address does not match system administrator credentials.');
+      }
+
+      // Login success
+      this.app.activeUser = {
+        username: 'admin',
+        role: 'ADMIN',
+        fullName: 'System Administrator',
+        email: 'admin@votechain.net',
+        walletAddress: w.address,
+        walletPrivateKey: keyHex,
+        walletPublicKey: adminPubKeyHex
+      };
+      this.app.wallet = w;
+
+      this.adminLoginKeyInput.value = '';
+      this.app.showNotification('Admin cryptographic credentials verified successfully!', 'success');
+      this.app.refreshAllViews();
+      window.location.hash = '#/admin';
+
+    } catch (e: any) {
+      console.error(e);
+      this.app.showNotification(`Verification Failed: ${e.message}`, 'error');
+    } finally {
+      this.btnAdminLoginSubmit.disabled = false;
+      this.btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Verify Cryptographic Key';
+    }
+  }
+
+  private loadDemoAdminKey() {
+    this.adminLoginKeyInput.value = '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042013c369ba077f7a330f47615b5e75248e53187fd49eed9df27205c24edf072b2aa14403420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9';
   }
 
   private async authenticateSession(profile: UserProfile) {
