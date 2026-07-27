@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoteChain - Secure Blockchain Governance Portal</title>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="logo-area" style="cursor: pointer;" onclick="window.location.hash = '#/'">
+        <i class="fa-solid fa-cube logo-icon"></i>
+        <div>
+          <span class="logo-text">VOTE CHAIN</span>
+          <span class="logo-subtitle">Decentralized Identity-Verified Governance</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <!-- Live Integrity Alert -->
+        <div id="integrity-badge" class="integrity-banner valid">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span id="integrity-status-text">Ledger Secured</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-container">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <nav class="nav-menu">
+          <a class="nav-item active" href="#/"><i class="fa-solid fa-house"></i> Home Board</a>
+          <a class="nav-item" href="#/login"><i class="fa-solid fa-wallet"></i> Connect Wallet</a>
+          <a class="nav-item" href="#/register"><i class="fa-solid fa-user-plus"></i> Register KYC</a>
+          <a class="nav-item" href="#/voter" style="display: none;"><i class="fa-solid fa-square-poll-horizontal"></i> Voter Terminal</a>
+          <a class="nav-item" href="#/candidate" style="display: none;"><i class="fa-solid fa-user-tag"></i> Candidate Portal</a>
+          <a class="nav-item" href="#/admin" style="display: none;"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
+          <a class="nav-item" href="#/verifier" style="display: none;"><i class="fa-solid fa-user-check"></i> Verifier Portal</a>
+          <a class="nav-item" href="#/explorer"><i class="fa-solid fa-database"></i> Block Explorer</a>
+          <a class="nav-item" href="#/tamper"><i class="fa-solid fa-triangle-exclamation"></i> Tamper Console</a>
+          <a class="nav-item" href="#/diagnostics"><i class="fa-solid fa-terminal"></i> Diagnostic Audits</a>
+        </nav>
+
+        <!-- Stats Counter -->
+        <div class="stats-widget">
+          <div class="stats-title">Network Statistics</div>
+          <div class="stat-item">
+            <div class="stat-icon"><i class="fa-solid fa-link"></i></div>
+            <div class="stat-value-group">
+              <span id="stat-blocks" class="stat-value">1</span>
+              <span class="stat-label">Blocks Mined</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+            <div class="stat-value-group">
+              <span id="stat-transactions" class="stat-value">1</span>
+              <span class="stat-label">Total Transactions</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon"><i class="fa-solid fa-square-check"></i></div>
+            <div class="stat-value-group">
+              <span id="stat-campaigns" class="stat-value">0</span>
+              <span class="stat-label">Elections Deployed</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Panel Views -->
+      <main>
+        <!-- Panel 1: Welcome Hub (Public Landing) -->
+        <section id="panel-welcome" class="panel active">
+          <div class="card">
+            <h1 style="font-family: var(--font-sans); font-size: 1.75rem; font-weight: 900; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">VoteChain Governance Hub</h1>
+            <p class="card-subtitle" style="margin-top: -0.25rem;">A secure, completely auditable, identity-verified blockchain elections dashboard.</p>
+            
+            <div style="display: flex; gap: 1rem; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; font-size: 0.9rem;">
+              <div style="flex: 1; background: var(--bg-card); padding: 1rem; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-user-plus" style="color: var(--color-primary);"></i> 1. Sign Up KYC</h3>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; line-height: 1.4;">Create a cryptographic keypair wallet and submit your National Identity Card (NIC) photo. Uploads are hosted securely off-chain via ImgBB.</p>
+              </div>
+              <div style="flex: 1; background: var(--bg-card); padding: 1rem; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-user-check" style="color: var(--color-secondary);"></i> 2. Get Audited</h3>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; line-height: 1.4;">The System Verifier logs into the portal to review your NIC image and approves your identity, mining the validation parameters directly to the ledger block.</p>
+              </div>
+              <div style="flex: 1; background: var(--bg-card); padding: 1rem; border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-square-poll-horizontal" style="color: var(--color-secondary);"></i> 3. Cast Vote</h3>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; line-height: 1.4;">Log in with your private key to cast a mathematically signed ballot. You are permitted to modify your choice any time prior to the election deadline.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Public Campaign Boards Select -->
+          <div class="select-campaign-banner">
+            <div>
+              <span class="logo-subtitle">Active Governance View</span>
+              <h3 style="font-family: var(--font-sans); font-size: 1.1rem;" id="welcome-selected-title">No Election Selected</h3>
+            </div>
+            <select id="select-campaign-welcome" class="select-dropdown">
+              <option value="">-- Choose Campaign --</option>
+            </select>
+          </div>
+
+          <div class="results-row" id="welcome-results-section" style="display: none;">
+            <div class="card">
+              <h2 class="card-title"><i class="fa-solid fa-chart-pie"></i> Election Tally Results</h2>
+              <div id="welcome-chart-list" class="results-chart-container">
+                <!-- Bar Chart goes here -->
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <div class="card">
+                <h3 class="card-title"><i class="fa-solid fa-clock"></i> Remaining Time</h3>
+                <div class="countdown-box">
+                  <span id="welcome-timer-display" class="countdown-timer">00:00:00</span>
+                  <span id="welcome-timer-label" style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase;">Remaining before deadline</span>
+                </div>
+              </div>
+
+              <!-- Winner Card -->
+              <div class="card" id="welcome-winner-card" style="display: none; background: rgba(0, 245, 212, 0.05); border: 1px solid rgba(0, 245, 212, 0.3);">
+                <h3 class="card-title"><i class="fa-solid fa-trophy" style="color: #ffb700;"></i> Election Winner</h3>
+                <div style="text-align: center; padding: 0.5rem 0;">
+                  <h2 id="welcome-winner-name" style="font-family: var(--font-sans); font-weight: 900; font-size: 1.6rem; color: var(--color-secondary);">Candidate Alpha</h2>
+                  <p id="welcome-winner-votes" style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.25rem;">with 12 votes cast</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 2: Connect Wallet (Login Page) -->
+        <section id="panel-login" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-wallet"></i> Connect Cryptographic Wallet</h2>
+            <p class="card-subtitle">Generate a secure cryptographic key pair (secp256r1/P-256) or enter your credentials to connect to your dashboard.</p>
+            
+            <div id="login-anonymous-view" class="form-group" style="gap: 1.25rem;">
+              <div class="form-row">
+                <button id="btn-login-generate" class="btn"><i class="fa-solid fa-key"></i> Create New Wallet</button>
+              </div>
+              
+              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-lock"></i> Import Private Credentials</h3>
+                <div class="form-group">
+                  <label for="login-privkey">Private Key Hex (PKCS8 format)</label>
+                  <input type="text" id="login-privkey" placeholder="Paste private key hex here..." />
+                </div>
+                <div class="form-group">
+                  <label for="login-pubkey">Public Key Hex (SPKI format)</label>
+                  <input type="text" id="login-pubkey" placeholder="Paste public key hex here..." />
+                </div>
+                <button id="btn-login-submit" class="btn btn-secondary"><i class="fa-solid fa-right-to-bracket"></i> Connect Keys</button>
+              </div>
+            </div>
+
+            <!-- Logged In View -->
+            <div id="login-connected-view" style="display: none; flex-direction: column; gap: 1.25rem;">
+              <div class="form-group">
+                <label>Active Wallet Address</label>
+                <div class="wallet-box">
+                  <i class="fa-solid fa-hashtag" style="color: var(--color-secondary);"></i>
+                  <span id="login-wallet-address" class="address-text">0x...</span>
+                  <button id="btn-login-copy-address" class="btn-icon" title="Copy Address"><i class="fa-regular fa-copy"></i></button>
+                </div>
+              </div>
+
+              <div class="form-row" style="align-items: center;">
+                <div class="form-group">
+                  <label>On-Chain Identity Verification</label>
+                  <div id="login-status-badge" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.9rem; margin-top: 0.25rem;">
+                    <!-- status renders here -->
+                  </div>
+                </div>
+
+                <div class="form-group" style="justify-content: flex-end; align-items: flex-end;">
+                  <button id="btn-login-claim-faucet" class="btn btn-secondary" style="display: none;"><i class="fa-solid fa-crown"></i> Claim Admin Status (Faucet)</button>
+                  <button id="btn-login-go-register" class="btn" style="display: none;"><i class="fa-solid fa-address-card"></i> Register KYC Profile</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem;">
+                <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="login-toggle-keys">
+                  <span>Display Cryptographic Credentials</span>
+                  <i class="fa-solid fa-chevron-down" id="login-keys-chevron"></i>
+                </label>
+                <div id="login-keys-box" style="display: none; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+                  <div class="form-group">
+                    <label>Public Key (Hex SPKI)</label>
+                    <textarea id="login-pubkey-hex" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.75rem;"></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label>Private Key (Hex PKCS8 - SAVE SECURELY)</label>
+                    <textarea id="login-privkey-hex" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.75rem; color: #ffb7d0;"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <button id="btn-login-disconnect" class="btn btn-danger" style="margin-top: 1rem; width: fit-content;"><i class="fa-solid fa-unlink"></i> Disconnect Wallet</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 3: Register KYC Portal -->
+        <section id="panel-register" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-address-card"></i> Submit KYC Identity Registration</h2>
+            <p class="card-subtitle">Upload your National Identity Card (NIC) photo and personal details. The verifier will audit your request on-chain.</p>
+            
+            <div id="register-unconnected-warning" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
+              <i class="fa-solid fa-wallet" style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--color-danger);"></i>
+              <p>Please connect your cryptographic wallet first to register a KYC profile.</p>
+              <button class="btn" style="margin-top: 1rem;" onclick="window.location.hash = '#/login'"><i class="fa-solid fa-plug"></i> Go Connect Wallet</button>
+            </div>
+
+            <div id="register-form-area" style="display: none; flex-direction: column; gap: 1.25rem;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-name">Full Name (Matches NIC)</label>
+                  <input type="text" id="reg-name" placeholder="John Doe" />
+                </div>
+                <div class="form-group">
+                  <label for="reg-email">Email Address</label>
+                  <input type="email" id="reg-email" placeholder="john@example.com" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-wallet">Wallet Address (Auto-populated)</label>
+                  <input type="text" id="reg-wallet" readonly style="font-family: var(--font-mono); color: var(--color-secondary); background: var(--bg-main);" />
+                </div>
+                <div class="form-group">
+                  <label for="reg-role">Register As</label>
+                  <select id="reg-role">
+                    <option value="VOTER">Voter Profile</option>
+                    <option value="CANDIDATE">Candidate Nominee</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Candidate Bio (Shows only if role is CANDIDATE) -->
+              <div class="form-group" id="reg-bio-group" style="display: none;">
+                <label for="reg-bio">Manifesto / Platform Slogan (Admin & Voters will view this)</label>
+                <textarea id="reg-bio" rows="3" placeholder="State your governance goals, manifesto points..."></textarea>
+              </div>
+
+              <!-- ImgBB Upload NIC Zone -->
+              <div class="form-group">
+                <label>Upload National Identity Card (NIC) Photo</label>
+                <div id="nic-dropzone" style="border: 2px dashed var(--border-color); padding: 2rem; text-align: center; background: var(--bg-card); cursor: pointer; transition: var(--transition-smooth); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: var(--color-primary);"></i>
+                  <span style="font-weight: 600;">Drag & Drop or Click to Select NIC Image</span>
+                  <span style="font-size: 0.75rem; color: var(--color-text-muted);">Supports PNG, JPG, JPEG (Max 5MB)</span>
+                  <input type="file" id="nic-file-input" accept="image/*" style="display: none;" />
+                </div>
+                
+                <!-- Image upload progress preview -->
+                <div id="nic-preview-box" style="display: none; align-items: center; gap: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; margin-top: 0.5rem;">
+                  <img id="nic-image-preview" src="" alt="NIC Thumbnail" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid var(--border-color);" />
+                  <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.25rem;">
+                    <span id="nic-file-name" style="font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">nic.png</span>
+                    <span id="nic-upload-status" style="font-size: 0.75rem; color: var(--color-text-muted);">File loaded. Ready to upload.</span>
+                    <div style="width: 100%; height: 6px; background: var(--bg-main); border: 1px solid rgba(157, 78, 221, 0.1); display: none;" id="nic-progress-bar-container">
+                      <div style="height: 100%; background: var(--color-secondary); width: 0%; transition: width 0.3s;" id="nic-progress-bar-fill"></div>
+                    </div>
+                  </div>
+                  <button id="btn-remove-nic" class="btn-icon" style="color: var(--color-danger); font-size: 1.25rem;" title="Remove File"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+              </div>
+
+              <button id="btn-submit-registration" class="btn" style="margin-top: 1rem;"><i class="fa-solid fa-file-signature"></i> Sign & Submit KYC Registration</button>
+            </div>
+            
+            <!-- Already Submitted Message -->
+            <div id="register-completed-view" style="display: none; text-align: center; padding: 2rem;">
+              <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: var(--color-secondary); margin-bottom: 1rem;"></i>
+              <h3>KYC Profile Logged on Ledger</h3>
+              <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;" id="register-completion-status-text">Your profile is currently pending verification from the System Verifier Admin.</p>
+              <div id="register-submitted-details" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; margin: 1.5rem auto 0; text-align: left; max-width: 500px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- details go here -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 4: Voter Terminal -->
+        <section id="panel-voter-terminal" class="panel">
+          <div class="select-campaign-banner">
+            <div>
+              <span class="logo-subtitle">Active Selection</span>
+              <h3 style="font-family: var(--font-sans); font-size: 1.1rem;" id="vote-selected-title">No Election Selected</h3>
+            </div>
+            <select id="select-campaign-vote" class="select-dropdown">
+              <option value="">-- Choose Campaign --</option>
+            </select>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-square-poll-horizontal"></i> Cast or Modify Vote</h2>
+            <p class="card-subtitle">Sign your selection with your wallet. You can change your vote at any time before the campaign deadline.</p>
+
+            <div id="voter-terminal-core" style="display: flex; flex-direction: column; gap: 1.25rem;">
+              <div class="form-group">
+                <label>Select Candidate</label>
+                <div id="vote-candidate-radio-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                  <!-- Dynamic radio inputs populated here -->
+                  <p style="color: var(--color-text-muted);">Please select a campaign above.</p>
+                </div>
+              </div>
+
+              <!-- Existing Vote Display -->
+              <div id="existing-vote-box" style="display: none; background: rgba(0, 245, 212, 0.05); border: 1px solid rgba(0, 245, 212, 0.2); padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase;">Your Current On-Chain Choice</span>
+                    <h4 id="existing-vote-candidate" style="color: var(--color-secondary); font-family: var(--font-sans); font-size: 1.1rem;">Candidate Alpha</h4>
+                  </div>
+                  <span id="existing-vote-badge" style="font-size: 0.75rem; background: rgba(0, 245, 212, 0.15); color: var(--color-secondary); font-weight: 700; padding: 0.25rem 0.5rem;">Audited & Recorded</span>
+                </div>
+              </div>
+
+              <div class="form-group" style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem;">
+                <label>Transaction Signing Payload (Hex Signature)</label>
+                <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 0.5rem;">The following transaction will be generated and signed with your private key:</p>
+                <div class="wallet-box" style="background: var(--bg-card); font-family: var(--font-mono); font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; height: 75px; overflow-y: auto;" id="vote-tx-payload">
+                  { tx: "Select candidate to generate payload..." }
+                </div>
+              </div>
+
+              <button id="btn-submit-vote" class="btn" disabled><i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign & Cast Vote</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 5: Candidate Portal -->
+        <section id="panel-candidate-portal" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-user-tag"></i> Candidate Nominee Portal</h2>
+            <p class="card-subtitle">Monitor your election standings and verify your KYC profile credentials on the block ledger.</p>
+            
+            <div id="candidate-portal-details" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1.5rem; border-bottom: 1px solid rgba(157, 78, 221, 0.1); padding-bottom: 1rem;">
+                <div id="candidate-portal-avatar" style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 1.5rem; color: var(--bg-main);">CA</div>
+                <div>
+                  <h3 id="candidate-portal-name" style="font-size: 1.25rem;">Candidate Alpha</h3>
+                  <span id="candidate-portal-address" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-secondary);">0x...</span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>KYC Profile Status</label>
+                  <span id="candidate-portal-kyc-status" style="font-weight: 700; font-size: 1rem;">VERIFIED</span>
+                </div>
+                <div class="form-group">
+                  <label>NIC Identity Link</label>
+                  <a id="candidate-portal-nic-link" href="" target="_blank" style="color: var(--color-primary); font-size: 0.9rem; font-weight: 600; text-decoration: none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Uploaded NIC on ImgBB</a>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Nomination Manifesto</label>
+                <div style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 1rem; font-size: 0.9rem; line-height: 1.5;" id="candidate-portal-bio">
+                  Your manifesto biography...
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 6: Admin Panel (Election Deploys) -->
+        <section id="panel-admin-panel" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-user-shield"></i> Deploy New Election</h2>
+            <p class="card-subtitle">Establish voting rules, add candidates, configure voter registration, and broadcast the deployment transaction.</p>
+            
+            <div class="form-group">
+              <label for="campaign-title">Election Title</label>
+              <input type="text" id="campaign-title" placeholder="e.g., General Council Election 2026" />
+            </div>
+
+            <div class="form-group">
+              <label for="campaign-desc">Description</label>
+              <textarea id="campaign-desc" rows="3" placeholder="Provide context and summary of the election rules..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="campaign-duration">Voting Duration (Minutes)</label>
+                <input type="number" id="campaign-duration" value="5" min="1" max="180" />
+              </div>
+
+              <div class="form-group">
+                <label for="campaign-type">Voter Registration Access</label>
+                <select id="campaign-type">
+                  <option value="public">Public (All verified addresses can vote)</option>
+                  <option value="private">Restricted Whitelist (Admin authorized only)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" id="whitelist-input-group" style="display: none;">
+              <label for="campaign-whitelist">Voter Address Whitelist (One address per line)</label>
+              <textarea id="campaign-whitelist" rows="3" placeholder="0x...&#10;0x..."></textarea>
+            </div>
+
+            <!-- Dynamic Candidates List -->
+            <div class="form-group" style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem;">
+              <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span>Registered Nominees (Choose Verified Candidates)</span>
+                <button id="btn-add-candidate-input" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Add Nominee</button>
+              </label>
+              
+              <div id="candidates-input-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <!-- Candidate 1 Default -->
+                <div class="form-row candidate-input-row" style="grid-template-columns: 1fr 2fr auto; align-items: center;">
+                  <input type="text" class="cand-input-name" placeholder="Candidate Name" value="Candidate Alpha" />
+                  <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" value="Pioneering absolute transparency and open communication." />
+                  <button class="btn-icon btn-remove-candidate" disabled><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+                <!-- Candidate 2 Default -->
+                <div class="form-row candidate-input-row" style="grid-template-columns: 1fr 2fr auto; align-items: center;">
+                  <input type="text" class="cand-input-name" placeholder="Candidate Name" value="Candidate Beta" />
+                  <input type="text" class="cand-input-bio" placeholder="Short manifesto/slogan" value="Advocating for dynamic updates and streamlined execution rules." />
+                  <button class="btn-icon btn-remove-candidate" disabled><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <button id="btn-deploy-campaign" class="btn" style="margin-top: 1rem;"><i class="fa-solid fa-square-plus"></i> Deploy Smart Contract</button>
+          </div>
+        </section>
+
+        <!-- Panel 7: Verifier Portal (KYC Audits) -->
+        <section id="panel-verifier-portal" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-user-check"></i> Identity Verifier Audits</h2>
+            <p class="card-subtitle">Review voter and candidate profile details and NIC photo logs to approve/reject on-chain credentials.</p>
+            
+            <div id="verifier-applications-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
+              <!-- Renders list of KYC applications -->
+              <div style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
+                <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--color-primary);"></i>
+                <p>No KYC applications pending verification at this moment.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 8: Block Explorer -->
+        <section id="panel-explorer" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-cubes"></i> Blockchain Block Explorer</h2>
+            <p class="card-subtitle">Inspect the hash chain, nonces, and transactions. Verify historical audit trails of vote changes.</p>
+            
+            <!-- Mempool Pending Txs -->
+            <div id="mempool-banner-widget" class="mempool-banner" style="display: none;">
+              <div class="mempool-text">
+                <i class="fa-solid fa-spinner fa-spin" style="color: var(--color-secondary); margin-right: 0.5rem;"></i>
+                There are <span id="mempool-tx-count" class="mempool-count">0</span> pending signed transactions in the mempool.
+              </div>
+              <button id="btn-mine-block" class="btn" style="padding: 0.45rem 1rem; font-size: 0.8rem;"><i class="fa-solid fa-pickaxe"></i> Mine Pending Transactions</button>
+            </div>
+
+            <!-- Block Slider Row -->
+            <div id="blocks-visual-flow" class="blocks-flow">
+              <!-- Dynamically populated blocks with links -->
+            </div>
+            
+            <!-- Block Detail Container -->
+            <div id="explorer-block-detail" style="display: none; border-top: 1px solid rgba(157, 78, 221, 0.15); padding-top: 1.25rem; flex-direction: column; gap: 1rem;">
+              <h3 style="font-family: var(--font-mono); font-size: 1.1rem; display: flex; justify-content: space-between;">
+                <span>Block Details: Block #<span id="detail-block-index">0</span></span>
+                <span id="detail-block-badge" class="block-status valid">Valid</span>
+              </h3>
+              
+              <div class="form-row" style="font-size: 0.85rem;">
+                <div class="form-group">
+                  <label>Block Hash</label>
+                  <input type="text" id="detail-block-hash" readonly style="font-family: var(--font-mono); font-size: 0.8rem; background: var(--bg-main);" />
+                </div>
+                <div class="form-group">
+                  <label>Previous Block Hash</label>
+                  <input type="text" id="detail-block-prev-hash" readonly style="font-family: var(--font-mono); font-size: 0.8rem; background: var(--bg-main);" />
+                </div>
+              </div>
+
+              <div class="form-row" style="font-size: 0.85rem; grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-group">
+                  <label>Mining Nonce</label>
+                  <span id="detail-block-nonce" style="font-family: var(--font-mono); font-weight: 700; font-size: 1rem; color: var(--color-secondary);">0</span>
+                </div>
+                <div class="form-group">
+                  <label>Mined At</label>
+                  <span id="detail-block-time" style="font-size: 0.9rem;">2026-07-27 16:45:00</span>
+                </div>
+                <div class="form-group">
+                  <label>Transaction Count</label>
+                  <span id="detail-block-tx-count" style="font-family: var(--font-mono); font-weight: 700; font-size: 1rem;">0</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Transactions Recorded</label>
+                <div id="detail-block-transactions" class="tx-list">
+                  <!-- List of transaction cards inside block -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 9: Tamper Console -->
+        <section id="panel-tamper" class="panel">
+          <div class="card" style="border-color: rgba(255, 0, 85, 0.4);">
+            <h2 class="card-title" style="color: var(--color-danger);"><i class="fa-solid fa-triangle-exclamation"></i> Blockchain Tamper Simulator</h2>
+            <p class="card-subtitle">Directly alter transaction data inside mined blocks. Inspect how hashing and signature validation secure the chain.</p>
+            
+            <div class="form-group">
+              <label for="select-tamper-block">Select Block to Edit</label>
+              <select id="select-tamper-block">
+                <option value="">-- Choose Block --</option>
+              </select>
+            </div>
+
+            <!-- Alter Editor (Dynamically rendered based on selected block) -->
+            <div id="tamper-editor-area" style="display: none; flex-direction: column; gap: 1rem; border-top: 1px solid rgba(255, 0, 85, 0.15); padding-top: 1.25rem;">
+              <h3 style="font-size: 1.1rem; color: var(--color-danger); display: flex; justify-content: space-between; align-items: center;">
+                <span>Tamper Editor: Block #<span id="tamper-block-index">1</span></span>
+                <span style="font-size: 0.75rem; background: rgba(255, 0, 85, 0.15); color: var(--color-danger); font-weight: 700; padding: 0.25rem 0.5rem;"><i class="fa-solid fa-bolt"></i> Editable Block Copy</span>
+              </h3>
+              
+              <div id="tamper-transactions-list" class="tamper-editor-grid">
+                <!-- Inputs for transaction payloads are rendered here -->
+              </div>
+              
+              <div class="form-row" style="margin-top: 0.5rem;">
+                <button id="btn-save-tamper" class="btn btn-danger"><i class="fa-solid fa-circle-check"></i> Write Altered Data to Block</button>
+                <button id="btn-restore-tamper" class="btn btn-secondary" style="border-color: var(--color-text-muted); color: var(--color-text-muted);"><i class="fa-solid fa-rotate-left"></i> Restore Original Block</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 10: Diagnostics -->
+        <section id="panel-diagnostics" class="panel">
+          <div class="card">
+            <h2 class="card-title"><i class="fa-solid fa-stethoscope"></i> Automated System Audits</h2>
+            <p class="card-subtitle">Run a series of 8 cryptographic and state checks, verifying keypairs, transaction signatures, KYC pending locks, and block tampering protection.</p>
+            <button id="btn-run-diagnostics" class="btn" style="width: fit-content;"><i class="fa-solid fa-play"></i> Run Cryptographic Security Audits</button>
+            <div id="diagnostics-log-box" style="display: none; background: var(--bg-main); border: 1px solid var(--border-color); padding: 1rem; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; max-height: 400px; overflow-y: auto; flex-direction: column; gap: 0.5rem;">
+              <!-- Logs print here -->
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Mining Overlay -->
+    <div id="mining-modal" class="mining-overlay">
+      <div class="mining-content">
+        <div class="mining-spinner"></div>
+        <h2 style="font-family: var(--font-sans); font-weight: 700;">MINING BLOCK...</h2>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem;">Searching for valid nonce to meet cryptographic Proof-of-Work difficulty...</p>
+        <div id="mining-status-nonce" style="font-family: var(--font-mono); font-size: 1rem; color: var(--color-secondary);">Hash Nonce: 0</div>
+        <div id="mining-status-hash" class="mining-hash-preview">000000000000000000000...</div>
+      </div>
+    </div>
+
+    <!-- Notification Overlay -->
+    <div id="notification-container"></div>
+
+    <!-- App Scripts Entry -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
