@@ -173,7 +173,18 @@ export class VoterTerminal {
 
     // Case 2: KYC not submitted or not verified
     const profile = this.app.blockchain.voterRegistry.get(wallet.address.toLowerCase());
-    if (!profile) {
+    const pendingTx = this.app.blockchain.pendingTransactions.find(t => 
+      t.sender.toLowerCase() === wallet.address.toLowerCase() && 
+      (t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
+    );
+    const user = this.app.activeUser!;
+
+    let currentStatus = 'UNSUBMITTED';
+    if (profile) currentStatus = profile.status;
+    else if (pendingTx) currentStatus = 'PENDING';
+    else if (user.kycStatus) currentStatus = user.kycStatus;
+
+    if (currentStatus === 'UNSUBMITTED') {
       if (statusHeader) statusHeader.innerHTML = `
         <div class="alert-box info">
           <i class="fa-solid fa-id-card"></i>
@@ -199,7 +210,7 @@ export class VoterTerminal {
       return;
     }
 
-    if (profile.status === 'PENDING') {
+    if (currentStatus === 'PENDING') {
       if (statusHeader) statusHeader.innerHTML = `
         <div class="alert-box warning">
           <i class="fa-solid fa-hourglass-half"></i>
@@ -224,7 +235,7 @@ export class VoterTerminal {
       return;
     }
 
-    if (profile.status === 'REJECTED') {
+    if (currentStatus === 'REJECTED') {
       if (statusHeader) statusHeader.innerHTML = `
         <div class="alert-box danger">
           <i class="fa-solid fa-circle-xmark"></i>

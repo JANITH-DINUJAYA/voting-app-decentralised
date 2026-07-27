@@ -736,22 +736,58 @@ export class LoginRegister {
     // Faucet button
     if (this.btnLoginClaimFaucet) this.btnLoginClaimFaucet.style.display = 'block';
 
-    // KYC status
+    // KYC status check across Blockchain Registry, Mempool, and Database Profile
     const profile = this.app.blockchain.voterRegistry.get(w.address.toLowerCase());
+
+    const pendingTx = this.app.blockchain.pendingTransactions.find(t => 
+      t.sender.toLowerCase() === w.address.toLowerCase() && 
+      (t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
+    );
+
+    let displayProfile: { name: string; email: string; nicPhoto: string; status: string; role: string; bio?: string } | null = null;
+
+    if (profile) {
+      displayProfile = {
+        name: profile.name,
+        email: profile.email,
+        nicPhoto: profile.nicPhoto,
+        status: profile.status,
+        role: profile.role,
+        bio: profile.bio
+      };
+    } else if (pendingTx) {
+      displayProfile = {
+        name: pendingTx.payload.name,
+        email: pendingTx.payload.email,
+        nicPhoto: pendingTx.payload.nicPhoto,
+        status: 'PENDING',
+        role: pendingTx.type === 'REGISTER_CANDIDATE_KYC' ? 'CANDIDATE' : 'VOTER',
+        bio: pendingTx.payload.bio
+      };
+    } else if (user.kycStatus && user.kycStatus !== 'UNSUBMITTED') {
+      displayProfile = {
+        name: user.fullName,
+        email: user.email,
+        nicPhoto: user.nicPhoto || 'https://via.placeholder.com/400x250?text=NIC+Photo+Unavailable',
+        status: user.kycStatus,
+        role: user.role,
+        bio: user.bio
+      };
+    }
 
     // Candidate bio field visibility
     if (this.regBioGroup) {
       this.regBioGroup.style.display = user.role === 'CANDIDATE' ? 'flex' : 'none';
     }
 
-    if (!profile || this.isEditing) {
+    if (!displayProfile || this.isEditing) {
       if (this.kycRegistrationSubview) this.kycRegistrationSubview.style.display = 'flex';
       if (this.kycCompletedSubview) this.kycCompletedSubview.style.display = 'none';
 
-      if (profile && this.isEditing) {
-        if (this.regBioText) this.regBioText.value = profile.bio || '';
-        this.uploadedImageUrl = profile.nicPhoto;
-        if (this.previewImage) this.previewImage.src = profile.nicPhoto;
+      if (displayProfile && this.isEditing) {
+        if (this.regBioText) this.regBioText.value = displayProfile.bio || '';
+        this.uploadedImageUrl = displayProfile.nicPhoto;
+        if (this.previewImage) this.previewImage.src = displayProfile.nicPhoto;
         if (this.previewBox) this.previewBox.style.display = 'flex';
         if (this.fileNameText) this.fileNameText.textContent = 'Current photo loaded.';
         if (this.uploadStatusText) this.uploadStatusText.textContent = 'Drag a new image to replace.';
@@ -762,9 +798,9 @@ export class LoginRegister {
 
       if (this.sessKycStatusBadge) {
         const badge = this.sessKycStatusBadge;
-        if (profile.status === 'VERIFIED') {
+        if (displayProfile.status === 'VERIFIED') {
           badge.innerHTML = '<span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> Verified On-Chain</span>';
-        } else if (profile.status === 'REJECTED') {
+        } else if (displayProfile.status === 'REJECTED') {
           badge.innerHTML = '<span class="status-badge rejected"><i class="fa-solid fa-circle-xmark"></i> Application Rejected</span>';
         } else {
           badge.innerHTML = '<span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> Audit Pending</span>';
@@ -773,13 +809,13 @@ export class LoginRegister {
 
       if (this.submittedDetailsBox) {
         this.submittedDetailsBox.innerHTML = `
-          <div class="profile-data-row"><span class="profile-data-label">Name on Record</span><span class="profile-data-value">${profile.name}</span></div>
-          <div class="profile-data-row"><span class="profile-data-label">Email</span><span class="profile-data-value">${profile.email}</span></div>
-          <div class="profile-data-row"><span class="profile-data-label">Role</span><span class="profile-data-value">${profile.role}</span></div>
-          ${profile.bio ? `<div class="profile-data-row"><span class="profile-data-label">Manifesto</span><span class="profile-data-value" title="${profile.bio}" style="max-width: 50%; white-space: normal;">${profile.bio.substring(0, 80)}${profile.bio.length > 80 ? '...' : ''}</span></div>` : ''}
+          <div class="profile-data-row"><span class="profile-data-label">Name on Record</span><span class="profile-data-value">${displayProfile.name}</span></div>
+          <div class="profile-data-row"><span class="profile-data-label">Email</span><span class="profile-data-value">${displayProfile.email}</span></div>
+          <div class="profile-data-row"><span class="profile-data-label">Role</span><span class="profile-data-value">${displayProfile.role}</span></div>
+          ${displayProfile.bio ? `<div class="profile-data-row"><span class="profile-data-label">Manifesto</span><span class="profile-data-value" title="${displayProfile.bio}" style="max-width: 50%; white-space: normal;">${displayProfile.bio.substring(0, 80)}${displayProfile.bio.length > 80 ? '...' : ''}</span></div>` : ''}
           <div style="margin-top: 0.5rem;">
             <span class="profile-data-label">NIC Document</span>
-            <img src="${profile.nicPhoto}" alt="NIC" style="width: 100%; max-height: 140px; object-fit: contain; background: var(--bg-main); border: 1px solid var(--border-color); margin-top: 0.4rem; display: block;" />
+            <img src="${displayProfile.nicPhoto}" alt="NIC" style="width: 100%; max-height: 140px; object-fit: contain; background: var(--bg-main); border: 1px solid var(--border-color); margin-top: 0.4rem; display: block;" />
           </div>
           <button id="btn-edit-profile" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;"><i class="fa-solid fa-user-pen"></i> Edit KYC Details</button>
         `;

@@ -186,9 +186,27 @@ export class App {
     }
 
     const profile = this.blockchain.voterRegistry.get(this.wallet.address.toLowerCase());
+    const pendingTx = this.blockchain.pendingTransactions.find(t => 
+      t.sender.toLowerCase() === this.wallet!.address.toLowerCase() && 
+      (t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
+    );
+    const user = this.activeUser!;
+
+    let currentStatus = 'UNSUBMITTED';
+    let displayProfile = profile ? { name: profile.name, email: profile.email } : null;
+
+    if (profile) {
+      currentStatus = profile.status;
+    } else if (pendingTx) {
+      currentStatus = 'PENDING';
+      displayProfile = { name: pendingTx.payload.name, email: pendingTx.payload.email };
+    } else if (user.kycStatus && user.kycStatus !== 'UNSUBMITTED') {
+      currentStatus = user.kycStatus;
+      displayProfile = { name: user.fullName, email: user.email };
+    }
 
     // Case 2: KYC not yet submitted
-    if (!profile) {
+    if (currentStatus === 'UNSUBMITTED') {
       statusHeader.innerHTML = `
         <div class="alert-box info">
           <i class="fa-solid fa-circle-info"></i>
@@ -213,7 +231,7 @@ export class App {
     }
 
     // Case 3: KYC pending
-    if (profile.status === 'PENDING') {
+    if (currentStatus === 'PENDING') {
       statusHeader.innerHTML = `
         <div class="alert-box warning">
           <i class="fa-solid fa-hourglass-half"></i>
@@ -229,8 +247,8 @@ export class App {
           <h3 style="margin-bottom: 0.5rem;">Audit In Progress</h3>
           <p style="color: var(--color-text-muted); font-size: 0.85rem;">Your application is queued for review. This typically takes a few moments.</p>
           <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.35rem;">
-            <div><strong>Name:</strong> ${profile.name}</div>
-            <div><strong>Email:</strong> ${profile.email}</div>
+            <div><strong>Name:</strong> ${displayProfile ? displayProfile.name : user.fullName}</div>
+            <div><strong>Email:</strong> ${displayProfile ? displayProfile.email : user.email}</div>
             <div><strong>Status:</strong> <span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> PENDING</span></div>
           </div>
         </div>
@@ -242,7 +260,7 @@ export class App {
     }
 
     // Case 4: KYC rejected
-    if (profile.status === 'REJECTED') {
+    if (currentStatus === 'REJECTED') {
       statusHeader.innerHTML = `
         <div class="alert-box danger">
           <i class="fa-solid fa-circle-xmark"></i>
@@ -276,6 +294,8 @@ export class App {
         </div>
       </div>
     `;
+
+    if (!profile) return;
 
     const initials = profile.name.split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase();
 
