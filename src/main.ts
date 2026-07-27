@@ -10,9 +10,20 @@ import { VerifierPortal } from './ui/VerifierPortal';
 import { runAutomatedTests } from './blockchain/test';
 import './style.css';
 
+export interface UserProfile {
+  username: string;
+  role: 'ADMIN' | 'VOTER' | 'CANDIDATE';
+  fullName: string;
+  email: string;
+  walletPrivateKey?: string;
+  walletPublicKey?: string;
+  walletAddress?: string;
+}
+
 export class App {
   public blockchain: Blockchain;
   public wallet: Wallet | null = null;
+  public activeUser: UserProfile | null = null;
   public selectedCampaignAddress: string = '';
 
   // Routing
@@ -72,9 +83,6 @@ export class App {
       case '#/login':
         this.loginRegister.render();
         break;
-      case '#/register':
-        this.loginRegister.render();
-        break;
       case '#/voter':
         this.voterTerminal.render();
         break;
@@ -100,26 +108,67 @@ export class App {
    * Render Candidate Nomination standing view
    */
   private renderCandidateNomineePortal() {
-    if (!this.wallet) return;
+    const card = document.getElementById('candidate-portal-details')!;
+    if (!card) return;
 
-    const pName = document.getElementById('candidate-portal-name')!;
-    const pAddress = document.getElementById('candidate-portal-address')!;
-    const pKycStatus = document.getElementById('candidate-portal-kyc-status')!;
-    const pNicLink = document.getElementById('candidate-portal-nic-link') as HTMLAnchorElement;
-    const pBio = document.getElementById('candidate-portal-bio')!;
-    const pAvatar = document.getElementById('candidate-portal-avatar')!;
+    if (!this.wallet) {
+      card.innerHTML = `<p style="color: var(--color-danger); text-align: center; padding: 2rem;"><i class="fa-solid fa-wallet" style="font-size: 2rem; margin-bottom: 0.5rem;"></i><br/>Wallet not generated. Please access the "Profile Session" page to generate your wallet.</p>`;
+      return;
+    }
 
     const profile = this.blockchain.voterRegistry.get(this.wallet.address.toLowerCase());
     if (profile && profile.role === 'CANDIDATE') {
+      if (profile.status !== 'VERIFIED') {
+        card.innerHTML = `<p style="color: var(--color-primary); text-align: center; padding: 2rem;"><i class="fa-solid fa-hourglass-half" style="font-size: 2rem; margin-bottom: 0.5rem;"></i><br/>KYC Identity Audit Pending. Your profile status is currently <strong>${profile.status}</strong>. Please wait for verifier approval.</p>`;
+        return;
+      }
+
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 1.5rem; border-bottom: 1px solid rgba(157, 78, 221, 0.1); padding-bottom: 1rem;">
+          <div id="candidate-portal-avatar" style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 1.5rem; color: var(--bg-main);">CA</div>
+          <div>
+            <h3 id="candidate-portal-name" style="font-size: 1.25rem;">Candidate Alpha</h3>
+            <span id="candidate-portal-address" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-secondary);">0x...</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>KYC Profile Status</label>
+            <span id="candidate-portal-kyc-status" style="font-weight: 700; font-size: 1rem;">VERIFIED</span>
+          </div>
+          <div class="form-group">
+            <label>NIC Identity Link</label>
+            <a id="candidate-portal-nic-link" href="" target="_blank" style="color: var(--color-primary); font-size: 0.9rem; font-weight: 600; text-decoration: none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Uploaded NIC on ImgBB</a>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nomination Manifesto</label>
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 1rem; font-size: 0.9rem; line-height: 1.5;" id="candidate-portal-bio">
+            Your manifesto biography...
+          </div>
+        </div>
+      `;
+
+      const pName = document.getElementById('candidate-portal-name')!;
+      const pAddress = document.getElementById('candidate-portal-address')!;
+      const pKycStatus = document.getElementById('candidate-portal-kyc-status')!;
+      const pNicLink = document.getElementById('candidate-portal-nic-link') as HTMLAnchorElement;
+      const pBio = document.getElementById('candidate-portal-bio')!;
+      const pAvatar = document.getElementById('candidate-portal-avatar')!;
+
       pName.textContent = profile.name;
       pAddress.textContent = this.wallet.address;
       pKycStatus.textContent = profile.status;
-      pKycStatus.style.color = profile.status === 'VERIFIED' ? 'var(--color-secondary)' : '#ffaa00';
+      pKycStatus.style.color = 'var(--color-secondary)';
       pNicLink.href = profile.nicPhoto;
       pBio.textContent = profile.bio || 'No manifesto provided.';
       
       const initials = profile.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
       pAvatar.textContent = initials;
+    } else {
+      card.innerHTML = `<p style="color: var(--color-danger); text-align: center; padding: 2rem;"><i class="fa-solid fa-circle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem;"></i><br/>KYC application required. Please access the "Profile Session" page to submit your details and wait for verifier approval.</p>`;
     }
   }
 

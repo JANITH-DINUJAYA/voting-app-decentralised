@@ -31,9 +31,8 @@
       <!-- Sidebar Navigation -->
       <aside class="sidebar">
         <nav class="nav-menu">
-          <a class="nav-item active" href="#/"><i class="fa-solid fa-house"></i> Home Board</a>
-          <a class="nav-item" href="#/login"><i class="fa-solid fa-wallet"></i> Connect Wallet</a>
-          <a class="nav-item" href="#/register"><i class="fa-solid fa-user-plus"></i> Register KYC</a>
+          <a class="nav-item active" href="#/login"><i class="fa-solid fa-right-to-bracket"></i> Login / Sign Up</a>
+          <a class="nav-item" href="#/" style="display: none;"><i class="fa-solid fa-house"></i> Home Board</a>
           <a class="nav-item" href="#/voter" style="display: none;"><i class="fa-solid fa-square-poll-horizontal"></i> Voter Terminal</a>
           <a class="nav-item" href="#/candidate" style="display: none;"><i class="fa-solid fa-user-tag"></i> Candidate Portal</a>
           <a class="nav-item" href="#/admin" style="display: none;"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
@@ -135,172 +134,180 @@
         </section>
 
         <!-- Panel 2: Connect Wallet (Login Page) -->
-        <section id="panel-login" class="panel">
+        <section id="panel-login" class="panel active">
           <div class="card">
-            <h2 class="card-title"><i class="fa-solid fa-wallet"></i> Connect Cryptographic Wallet</h2>
-            <p class="card-subtitle">Generate a secure cryptographic key pair (secp256r1/P-256) or enter your credentials to connect to your dashboard.</p>
-            
+            <!-- Tabs Headers -->
+            <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0.5rem;">
+              <button id="tab-btn-signin" class="btn active" style="flex: 1; background: transparent; border: none; border-bottom: 2px solid var(--color-primary); font-weight: 700; color: var(--color-text-main);"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+              <button id="tab-btn-signup" class="btn" style="flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; font-weight: 500; color: var(--color-text-muted);"><i class="fa-solid fa-user-plus"></i> Sign Up</button>
+            </div>
+
+            <!-- anonymous view (displays either signin form or signup form) -->
             <div id="login-anonymous-view" class="form-group" style="gap: 1.25rem;">
-              <div class="form-row">
-                <button id="btn-login-generate" class="btn"><i class="fa-solid fa-key"></i> Create New Wallet</button>
-              </div>
-
-              <!-- Quick Demo Profiles Section -->
-              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-bolt" style="color: var(--color-secondary);"></i> Quick Demo Sandbox Logins</h3>
-                <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: -0.25rem;">Connect instantly as pre-seeded cryptographic profiles to audit the pipeline.</p>
-                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
-                  <button id="btn-demo-admin" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem;"><i class="fa-solid fa-user-shield"></i> Admin Portal</button>
-                  <button id="btn-demo-voter" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem;"><i class="fa-solid fa-check-to-slot"></i> Demo Voter</button>
-                  <button id="btn-demo-candidate" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem;"><i class="fa-solid fa-user-tag"></i> Demo Candidate</button>
-                </div>
-              </div>
               
-              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-lock"></i> Import Private Credentials</h3>
+              <!-- SIGN IN VIEW -->
+              <div id="auth-signin-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                <h2 class="card-title" style="font-size: 1.15rem;"><i class="fa-solid fa-shield-halved"></i> Authenticate Credentials</h2>
                 <div class="form-group">
-                  <label for="login-privkey">Private Key Hex (PKCS8 format)</label>
-                  <input type="text" id="login-privkey" placeholder="Paste private key hex here..." />
+                  <label for="login-username">Username</label>
+                  <input type="text" id="login-username" placeholder="Enter username..." />
                 </div>
                 <div class="form-group">
-                  <label for="login-pubkey">Public Key Hex (SPKI format)</label>
-                  <input type="text" id="login-pubkey" placeholder="Paste public key hex here..." />
+                  <label for="login-password">Password</label>
+                  <input type="password" id="login-password" placeholder="Enter password..." />
                 </div>
-                <button id="btn-login-submit" class="btn btn-secondary"><i class="fa-solid fa-right-to-bracket"></i> Connect Keys</button>
+                <button id="btn-login-auth" class="btn"><i class="fa-solid fa-circle-check"></i> Log In</button>
               </div>
 
-              <div style="text-align: center; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; font-size: 0.85rem;">
-                <span style="color: var(--color-text-muted);">Need a new identity?</span>
-                <a href="#/register" style="color: var(--color-primary); text-decoration: none; font-weight: 600; margin-left: 0.25rem;"><i class="fa-solid fa-user-plus"></i> Submit KYC Registration</a>
-              </div>
-            </div>
-
-            <!-- Logged In View -->
-            <div id="login-connected-view" style="display: none; flex-direction: column; gap: 1.25rem;">
-              <div class="form-group">
-                <label>Active Wallet Address</label>
-                <div class="wallet-box">
-                  <i class="fa-solid fa-hashtag" style="color: var(--color-secondary);"></i>
-                  <span id="login-wallet-address" class="address-text">0x...</span>
-                  <button id="btn-login-copy-address" class="btn-icon" title="Copy Address"><i class="fa-regular fa-copy"></i></button>
-                </div>
-              </div>
-
-              <div class="form-row" style="align-items: center;">
+              <!-- SIGN UP VIEW -->
+              <div id="auth-signup-form" style="display: none; flex-direction: column; gap: 1rem;">
+                <h2 class="card-title" style="font-size: 1.15rem;"><i class="fa-solid fa-address-card"></i> Create Sandbox Account</h2>
                 <div class="form-group">
-                  <label>On-Chain Identity Verification</label>
-                  <div id="login-status-badge" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.9rem; margin-top: 0.25rem;">
-                    <!-- status renders here -->
-                  </div>
+                  <label for="register-username">Choose Username</label>
+                  <input type="text" id="register-username" placeholder="e.g., john_doe" />
                 </div>
-
-                <div class="form-group" style="justify-content: flex-end; align-items: flex-end;">
-                  <button id="btn-login-claim-faucet" class="btn btn-secondary" style="display: none;"><i class="fa-solid fa-coins"></i> Claim Faucet Tokens (Gas)</button>
-                  <button id="btn-login-go-register" class="btn" style="display: none;"><i class="fa-solid fa-address-card"></i> Register KYC Profile</button>
+                <div class="form-group">
+                  <label for="register-password">Password</label>
+                  <input type="password" id="register-password" placeholder="Enter password..." />
                 </div>
-              </div>
-
-              <div class="form-group" style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem;">
-                <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="login-toggle-keys">
-                  <span>Display Cryptographic Credentials</span>
-                  <i class="fa-solid fa-chevron-down" id="login-keys-chevron"></i>
-                </label>
-                <div id="login-keys-box" style="display: none; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+                <div class="form-row">
                   <div class="form-group">
-                    <label>Public Key (Hex SPKI)</label>
-                    <textarea id="login-pubkey-hex" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.75rem;"></textarea>
+                    <label for="register-fullname">Full Name</label>
+                    <input type="text" id="register-fullname" placeholder="John Doe" />
                   </div>
                   <div class="form-group">
-                    <label>Private Key (Hex PKCS8 - SAVE SECURELY)</label>
-                    <textarea id="login-privkey-hex" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.75rem; color: #ffb7d0;"></textarea>
+                    <label for="register-email">Email Address</label>
+                    <input type="email" id="register-email" placeholder="john@example.com" />
                   </div>
                 </div>
-              </div>
-
-              <button id="btn-login-disconnect" class="btn btn-danger" style="margin-top: 1rem; width: fit-content;"><i class="fa-solid fa-unlink"></i> Disconnect Wallet</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Panel 3: Register KYC Portal -->
-        <section id="panel-register" class="panel">
-          <div class="card">
-            <h2 class="card-title"><i class="fa-solid fa-address-card"></i> Submit KYC Identity Registration</h2>
-            <p class="card-subtitle">Upload your National Identity Card (NIC) photo and personal details. The verifier will audit your request on-chain.</p>
-            
-            <div id="register-unconnected-warning" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
-              <i class="fa-solid fa-wallet" style="font-size: 2rem; margin-bottom: 0.5rem; color: var(--color-danger);"></i>
-              <p>Please connect your cryptographic wallet first to register a KYC profile.</p>
-              <button class="btn" style="margin-top: 1rem;" onclick="window.location.hash = '#/login'"><i class="fa-solid fa-plug"></i> Go Connect Wallet</button>
-            </div>
-
-            <div id="register-form-area" style="display: none; flex-direction: column; gap: 1.25rem;">
-              <div class="form-row">
                 <div class="form-group">
-                  <label for="reg-name">Full Name (Matches NIC)</label>
-                  <input type="text" id="reg-name" placeholder="John Doe" />
-                </div>
-                <div class="form-group">
-                  <label for="reg-email">Email Address</label>
-                  <input type="email" id="reg-email" placeholder="john@example.com" />
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="reg-wallet">Wallet Address (Auto-populated)</label>
-                  <input type="text" id="reg-wallet" readonly style="font-family: var(--font-mono); color: var(--color-secondary); background: var(--bg-main);" />
-                </div>
-                <div class="form-group">
-                  <label for="reg-role">Register As</label>
-                  <select id="reg-role">
-                    <option value="VOTER">Voter Profile</option>
-                    <option value="CANDIDATE">Candidate Nominee</option>
+                  <label for="register-role-select">Sign Up As</label>
+                  <select id="register-role-select">
+                    <option value="VOTER">Voter (Allows ballot casting)</option>
+                    <option value="CANDIDATE">Candidate Nominee (Enables running in campaigns)</option>
                   </select>
                 </div>
+                <button id="btn-register-auth" class="btn btn-secondary"><i class="fa-solid fa-circle-check"></i> Register Account</button>
               </div>
 
-              <!-- Candidate Bio (Shows only if role is CANDIDATE) -->
-              <div class="form-group" id="reg-bio-group" style="display: none;">
-                <label for="reg-bio">Manifesto / Platform Slogan (Admin & Voters will view this)</label>
-                <textarea id="reg-bio" rows="3" placeholder="State your governance goals, manifesto points..."></textarea>
-              </div>
-
-              <!-- ImgBB Upload NIC Zone -->
-              <div class="form-group">
-                <label>Upload National Identity Card (NIC) Photo</label>
-                <div id="nic-dropzone" style="border: 2px dashed var(--border-color); padding: 2rem; text-align: center; background: var(--bg-card); cursor: pointer; transition: var(--transition-smooth); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
-                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: var(--color-primary);"></i>
-                  <span style="font-weight: 600;">Drag & Drop or Click to Select NIC Image</span>
-                  <span style="font-size: 0.75rem; color: var(--color-text-muted);">Supports PNG, JPG, JPEG (Max 5MB)</span>
-                  <input type="file" id="nic-file-input" accept="image/*" style="display: none;" />
+              <!-- Quick Sandbox Logins Info Box -->
+              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted);">Quick Demo Sandbox Logins (Click to Log In)</span>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+                  <button id="btn-demo-admin" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.45rem;"><i class="fa-solid fa-user-shield"></i> Admin</button>
+                  <button id="btn-demo-voter" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.45rem;"><i class="fa-solid fa-check-to-slot"></i> Voter</button>
+                  <button id="btn-demo-candidate" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.45rem;"><i class="fa-solid fa-user-tag"></i> Candidate</button>
                 </div>
-                
-                <!-- Image upload progress preview -->
-                <div id="nic-preview-box" style="display: none; align-items: center; gap: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; margin-top: 0.5rem;">
-                  <img id="nic-image-preview" src="" alt="NIC Thumbnail" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid var(--border-color);" />
-                  <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.25rem;">
-                    <span id="nic-file-name" style="font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">nic.png</span>
-                    <span id="nic-upload-status" style="font-size: 0.75rem; color: var(--color-text-muted);">File loaded. Ready to upload.</span>
-                    <div style="width: 100%; height: 6px; background: var(--bg-main); border: 1px solid rgba(157, 78, 221, 0.1); display: none;" id="nic-progress-bar-container">
-                      <div style="height: 100%; background: var(--color-secondary); width: 0%; transition: width 0.3s;" id="nic-progress-bar-fill"></div>
+                <span style="font-size: 0.7rem; color: var(--color-text-muted); text-align: center;">Credentials: admin/admin, voter/voter, candidate/candidate</span>
+              </div>
+            </div>
+
+            <!-- Logged In Profile Details View -->
+            <div id="login-connected-view" style="display: none; flex-direction: column; gap: 1.25rem;">
+              <h2 class="card-title"><i class="fa-solid fa-circle-user"></i> Active Profile Session</h2>
+              
+              <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+                <div><strong>Username:</strong> <span id="sess-username" style="color: var(--color-secondary);">voter</span></div>
+                <div><strong>Full Name:</strong> <span id="sess-fullname">John Doe</span></div>
+                <div><strong>Email:</strong> <span id="sess-email">john@example.com</span></div>
+                <div><strong>System Role:</strong> <span id="sess-role" style="font-weight: 700;">VOTER</span></div>
+              </div>
+
+              <!-- Wallet Connection View in Profile dashboard -->
+              <div id="sess-wallet-setup-section" style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem;">
+                <div id="sess-wallet-disconnected-subview" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: center; padding: 1rem;">
+                  <i class="fa-solid fa-wallet" style="font-size: 2rem; color: var(--color-danger);"></i>
+                  <h4 style="font-weight: 600;">Cryptographic Wallet Required</h4>
+                  <p style="font-size: 0.8rem; color: var(--color-text-muted);">Please generate a cryptographic key pair to participate in blockchain voting and verify your identity.</p>
+                  <button id="btn-profile-generate-wallet" class="btn" style="margin-top: 0.5rem; width: fit-content; align-self: center;"><i class="fa-solid fa-key"></i> Generate Wallet Key Pair</button>
+                </div>
+
+                <div id="sess-wallet-connected-subview" style="display: none; flex-direction: column; gap: 1rem;">
+                  <div class="form-group">
+                    <label>Derived Wallet Address</label>
+                    <div class="wallet-box">
+                      <i class="fa-solid fa-hashtag" style="color: var(--color-secondary);"></i>
+                      <span id="sess-wallet-address" class="address-text">0x...</span>
+                      <button id="btn-sess-copy-address" class="btn-icon" title="Copy Address"><i class="fa-regular fa-copy"></i></button>
                     </div>
                   </div>
-                  <button id="btn-remove-nic" class="btn-icon" style="color: var(--color-danger); font-size: 1.25rem;" title="Remove File"><i class="fa-solid fa-trash-can"></i></button>
+
+                  <!-- KYC Submission Form inside Connected Profile -->
+                  <div id="sess-kyc-registration-subview" style="display: none; flex-direction: column; gap: 1.25rem; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem;">
+                    <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-address-card"></i> Submit KYC Identity Registration</h3>
+                    <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: -0.25rem;">Upload your National Identity Card (NIC) photo. The verifier will audit your request on-chain.</p>
+                    
+                    <!-- Candidate Bio (Shows only if role is CANDIDATE) -->
+                    <div class="form-group" id="reg-bio-group" style="display: none;">
+                      <label for="reg-bio">Manifesto / Platform Slogan (Admin & Voters will view this)</label>
+                      <textarea id="reg-bio" rows="3" placeholder="State your governance goals, manifesto points..."></textarea>
+                    </div>
+
+                    <!-- ImgBB Upload NIC Zone -->
+                    <div class="form-group">
+                      <label>Upload National Identity Card (NIC) Photo</label>
+                      <div id="nic-dropzone" style="border: 2px dashed var(--border-color); padding: 2rem; text-align: center; background: var(--bg-card); cursor: pointer; transition: var(--transition-smooth); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--color-primary);"></i>
+                        <span style="font-weight: 600; font-size: 0.9rem;">Drag & Drop or Click to Select NIC Image</span>
+                        <span style="font-size: 0.7rem; color: var(--color-text-muted);">Supports PNG, JPG (Max 5MB)</span>
+                        <input type="file" id="nic-file-input" accept="image/*" style="display: none;" />
+                      </div>
+                      
+                      <!-- Image upload progress preview -->
+                      <div id="nic-preview-box" style="display: none; align-items: center; gap: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; margin-top: 0.5rem;">
+                        <img id="nic-image-preview" src="" alt="NIC Thumbnail" style="width: 70px; height: 70px; object-fit: cover; border: 1px solid var(--border-color);" />
+                        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.25rem;">
+                          <span id="nic-file-name" style="font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">nic.png</span>
+                          <span id="nic-upload-status" style="font-size: 0.7rem; color: var(--color-text-muted);">File loaded. Ready to upload.</span>
+                          <div style="width: 100%; height: 5px; background: var(--bg-main); border: 1px solid rgba(157, 78, 221, 0.1); display: none;" id="nic-progress-bar-container">
+                            <div style="height: 100%; background: var(--color-secondary); width: 0%;" id="nic-progress-bar-fill"></div>
+                          </div>
+                        </div>
+                        <button id="btn-remove-nic" class="btn-icon" style="color: var(--color-danger); font-size: 1.1rem;" title="Remove File"><i class="fa-solid fa-trash-can"></i></button>
+                      </div>
+                    </div>
+
+                    <button id="btn-submit-registration" class="btn" style="margin-top: 0.5rem;"><i class="fa-solid fa-file-signature"></i> Sign & Submit KYC Registration</button>
+                  </div>
+
+                  <!-- KYC Completed View inside Connected Profile -->
+                  <div id="sess-kyc-completed-subview" style="display: none; flex-direction: column; gap: 1rem; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div class="form-group">
+                        <label>Verification Status</label>
+                        <div id="sess-kyc-status-badge" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.9rem; margin-top: 0.25rem;">
+                          <!-- badge status -->
+                        </div>
+                      </div>
+                      <button id="btn-login-claim-faucet" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;"><i class="fa-solid fa-coins"></i> Claim Faucet Tokens (Gas)</button>
+                    </div>
+
+                    <div id="register-submitted-details" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                      <!-- details -->
+                    </div>
+                  </div>
+
+                  <!-- Keys toggle display -->
+                  <div class="form-group" style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem;">
+                    <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="login-toggle-keys">
+                      <span>Display Cryptographic Credentials</span>
+                      <i class="fa-solid fa-chevron-down" id="login-keys-chevron"></i>
+                    </label>
+                    <div id="login-keys-box" style="display: none; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+                      <div class="form-group">
+                        <label>Public Key (Hex SPKI)</label>
+                        <textarea id="login-pubkey-hex" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.75rem;"></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label>Private Key (Hex PKCS8 - SAVE SECURELY)</label>
+                        <textarea id="login-privkey-hex" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.75rem; color: #ffb7d0;"></textarea>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <button id="btn-submit-registration" class="btn" style="margin-top: 1rem;"><i class="fa-solid fa-file-signature"></i> Sign & Submit KYC Registration</button>
-            </div>
-            
-            <!-- Already Submitted Message -->
-            <div id="register-completed-view" style="display: none; text-align: center; padding: 2rem;">
-              <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: var(--color-secondary); margin-bottom: 1rem;"></i>
-              <h3>KYC Profile Logged on Ledger</h3>
-              <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;" id="register-completion-status-text">Your profile is currently pending verification from the System Verifier Admin.</p>
-              <div id="register-submitted-details" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; margin: 1.5rem auto 0; text-align: left; max-width: 500px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <!-- details go here -->
-              </div>
+              <button id="btn-login-disconnect" class="btn btn-danger" style="margin-top: 1rem; width: fit-content;"><i class="fa-solid fa-unlink"></i> Sign Out Account</button>
             </div>
           </div>
         </section>

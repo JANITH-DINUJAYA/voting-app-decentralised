@@ -1,46 +1,57 @@
 import { App } from '../main';
+import type { UserProfile } from '../main';
 import { Wallet } from '../blockchain/Wallet';
 import { Transaction } from '../blockchain/Transaction';
 
 export class LoginRegister {
   private app: App;
-  
-  // Login Elements
+
+  // Tabs
+  private tabSignIn!: HTMLButtonElement;
+  private tabSignUp!: HTMLButtonElement;
+  private signInForm!: HTMLElement;
+  private signUpForm!: HTMLElement;
+
+  // Login inputs
   private anonymousView!: HTMLElement;
   private connectedView!: HTMLElement;
-  private btnGenerate!: HTMLButtonElement;
+  private loginUsernameInput!: HTMLInputElement;
+  private loginPasswordInput!: HTMLInputElement;
+  private btnLoginAuth!: HTMLButtonElement;
+
+  // Sign Up inputs
+  private registerUsernameInput!: HTMLInputElement;
+  private registerPasswordInput!: HTMLInputElement;
+  private registerFullnameInput!: HTMLInputElement;
+  private registerEmailInput!: HTMLInputElement;
+  private registerRoleSelect!: HTMLSelectElement;
+  private btnRegisterAuth!: HTMLButtonElement;
+
+  // Demo buttons
   private btnDemoAdmin!: HTMLButtonElement;
   private btnDemoVoter!: HTMLButtonElement;
   private btnDemoCandidate!: HTMLButtonElement;
-  private importPrivkeyInput!: HTMLInputElement;
-  private importPubkeyInput!: HTMLInputElement;
-  private btnConnectSubmit!: HTMLButtonElement;
-  
-  private activeAddressText!: HTMLElement;
-  private btnCopyAddress!: HTMLButtonElement;
-  private statusBadge!: HTMLElement;
-  private btnClaimAdminFaucet!: HTMLButtonElement;
-  private btnGoRegister!: HTMLButtonElement;
-  private btnDisconnect!: HTMLButtonElement;
-  
-  private toggleKeysLabel!: HTMLElement;
-  private keysChevron!: HTMLElement;
-  private keysBox!: HTMLElement;
-  private pubkeyHexArea!: HTMLTextAreaElement;
-  private privkeyHexArea!: HTMLTextAreaElement;
 
-  // Register Elements
-  private warningView!: HTMLElement;
-  private formArea!: HTMLElement;
-  private completedView!: HTMLElement;
-  
-  private regNameInput!: HTMLInputElement;
-  private regEmailInput!: HTMLInputElement;
-  private regWalletInput!: HTMLInputElement;
-  private regRoleSelect!: HTMLSelectElement;
+  // Active Session display
+  private sessUsername!: HTMLElement;
+  private sessFullname!: HTMLElement;
+  private sessEmail!: HTMLElement;
+  private sessRole!: HTMLElement;
+
+  // Wallet Setup sections
+  private walletDisconnectedSubview!: HTMLElement;
+  private walletConnectedSubview!: HTMLElement;
+  private btnProfileGenerateWallet!: HTMLButtonElement;
+  private sessWalletAddress!: HTMLElement;
+  private btnSessCopyAddress!: HTMLButtonElement;
+  private sessKycStatusBadge!: HTMLElement;
+  private btnLoginClaimFaucet!: HTMLButtonElement;
+
+  // KYC Submission views inside Connected Profile
+  private kycRegistrationSubview!: HTMLElement;
+  private kycCompletedSubview!: HTMLElement;
   private regBioGroup!: HTMLElement;
   private regBioText!: HTMLTextAreaElement;
-  
   private dropzone!: HTMLElement;
   private fileInput!: HTMLInputElement;
   private previewBox!: HTMLElement;
@@ -50,60 +61,116 @@ export class LoginRegister {
   private progressBarContainer!: HTMLElement;
   private progressBarFill!: HTMLElement;
   private btnRemoveNic!: HTMLButtonElement;
-  
   private btnSubmitReg!: HTMLButtonElement;
-  
-  private completionStatusText!: HTMLElement;
   private submittedDetailsBox!: HTMLElement;
 
-  // State variables for file upload
+  // Keys toggle
+  private toggleKeysLabel!: HTMLElement;
+  private keysChevron!: HTMLElement;
+  private keysBox!: HTMLElement;
+  private pubkeyHexArea!: HTMLTextAreaElement;
+  private privkeyHexArea!: HTMLTextAreaElement;
+  private btnDisconnect!: HTMLButtonElement;
+
+  // State variables
   private selectedFile: File | null = null;
   private uploadedImageUrl: string = '';
   private isEditing: boolean = false;
 
   constructor(app: App) {
     this.app = app;
+    this.seedUsersDatabase();
     this.initElements();
     this.initEvents();
   }
 
+  private seedUsersDatabase() {
+    const existing = localStorage.getItem('votechain_users');
+    if (!existing) {
+      const defaultUsers: Record<string, UserProfile & { passwordHash: string }> = {
+        admin: {
+          username: 'admin',
+          passwordHash: 'admin', // Demo simple password match
+          role: 'ADMIN',
+          fullName: 'System Administrator',
+          email: 'admin@votechain.net',
+          walletAddress: '0xe513658465d6997d28be6460851b77dc703bf13a',
+          walletPrivateKey: '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042013c369ba077f7a330f47615b5e75248e53187fd49eed9df27205c24edf072b2aa14403420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9',
+          walletPublicKey: '3059301306072a8648ce3d020106082a8648ce3d03010703420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9'
+        },
+        voter: {
+          username: 'voter',
+          passwordHash: 'voter',
+          role: 'VOTER',
+          fullName: 'Demo Voter Profile',
+          email: 'voter@votechain.net',
+          walletAddress: '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91',
+          walletPrivateKey: '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042037d182389d0763c9898910cef4b767b083c6a1588565021e32e022851608f2c6a14403420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1',
+          walletPublicKey: '3059301306072a8648ce3d020106082a8648ce3d03010703420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1'
+        },
+        candidate: {
+          username: 'candidate',
+          passwordHash: 'candidate',
+          role: 'CANDIDATE',
+          fullName: 'Demo Candidate platform',
+          email: 'candidate@votechain.net',
+          walletAddress: '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb',
+          walletPrivateKey: '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b0201010420bbad54903c36aa68d8705d620444ee2e2ffacc4fc53fbf5fbd531573781ad342a14403420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9',
+          walletPublicKey: '3059301306072a8648ce3d020106082a8648ce3d03010703420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9'
+        }
+      };
+      localStorage.setItem('votechain_users', JSON.stringify(defaultUsers));
+    }
+  }
+
   private initElements() {
-    // Login
+    // Tabs
+    this.tabSignIn = document.getElementById('tab-btn-signin') as HTMLButtonElement;
+    this.tabSignUp = document.getElementById('tab-btn-signup') as HTMLButtonElement;
+    this.signInForm = document.getElementById('auth-signin-form')!;
+    this.signUpForm = document.getElementById('auth-signup-form')!;
+
+    // Anonymous views
     this.anonymousView = document.getElementById('login-anonymous-view')!;
     this.connectedView = document.getElementById('login-connected-view')!;
-    this.btnGenerate = document.getElementById('btn-login-generate') as HTMLButtonElement;
+    this.loginUsernameInput = document.getElementById('login-username') as HTMLInputElement;
+    this.loginPasswordInput = document.getElementById('login-password') as HTMLInputElement;
+    this.btnLoginAuth = document.getElementById('btn-login-auth') as HTMLButtonElement;
+
+    // Sign Up inputs
+    this.registerUsernameInput = document.getElementById('register-username') as HTMLInputElement;
+    this.registerPasswordInput = document.getElementById('register-password') as HTMLInputElement;
+    this.registerFullnameInput = document.getElementById('register-fullname') as HTMLInputElement;
+    this.registerEmailInput = document.getElementById('register-email') as HTMLInputElement;
+    this.registerRoleSelect = document.getElementById('register-role-select') as HTMLSelectElement;
+    this.btnRegisterAuth = document.getElementById('btn-register-auth') as HTMLButtonElement;
+
+    // Demo buttons
     this.btnDemoAdmin = document.getElementById('btn-demo-admin') as HTMLButtonElement;
     this.btnDemoVoter = document.getElementById('btn-demo-voter') as HTMLButtonElement;
     this.btnDemoCandidate = document.getElementById('btn-demo-candidate') as HTMLButtonElement;
-    this.importPrivkeyInput = document.getElementById('login-privkey') as HTMLInputElement;
-    this.importPubkeyInput = document.getElementById('login-pubkey') as HTMLInputElement;
-    this.btnConnectSubmit = document.getElementById('btn-login-submit') as HTMLButtonElement;
-    
-    this.activeAddressText = document.getElementById('login-wallet-address')!;
-    this.btnCopyAddress = document.getElementById('btn-login-copy-address') as HTMLButtonElement;
-    this.statusBadge = document.getElementById('login-status-badge')!;
-    this.btnClaimAdminFaucet = document.getElementById('btn-login-claim-faucet') as HTMLButtonElement;
-    this.btnGoRegister = document.getElementById('btn-login-go-register') as HTMLButtonElement;
-    this.btnDisconnect = document.getElementById('btn-login-disconnect') as HTMLButtonElement;
-    
-    this.toggleKeysLabel = document.getElementById('login-toggle-keys')!;
-    this.keysChevron = document.getElementById('login-keys-chevron')!;
-    this.keysBox = document.getElementById('login-keys-box')!;
-    this.pubkeyHexArea = document.getElementById('login-pubkey-hex') as HTMLTextAreaElement;
-    this.privkeyHexArea = document.getElementById('login-privkey-hex') as HTMLTextAreaElement;
 
-    // Register
-    this.warningView = document.getElementById('register-unconnected-warning')!;
-    this.formArea = document.getElementById('register-form-area')!;
-    this.completedView = document.getElementById('register-completed-view')!;
-    
-    this.regNameInput = document.getElementById('reg-name') as HTMLInputElement;
-    this.regEmailInput = document.getElementById('reg-email') as HTMLInputElement;
-    this.regWalletInput = document.getElementById('reg-wallet') as HTMLInputElement;
-    this.regRoleSelect = document.getElementById('reg-role') as HTMLSelectElement;
+    // Connected views
+    this.sessUsername = document.getElementById('sess-username')!;
+    this.sessFullname = document.getElementById('sess-fullname')!;
+    this.sessEmail = document.getElementById('sess-email')!;
+    this.sessRole = document.getElementById('sess-role')!;
+
+    // Wallet Section
+    this.walletDisconnectedSubview = document.getElementById('sess-wallet-disconnected-subview')!;
+    this.walletConnectedSubview = document.getElementById('sess-wallet-connected-subview')!;
+    this.btnProfileGenerateWallet = document.getElementById('btn-profile-generate-wallet') as HTMLButtonElement;
+    this.sessWalletAddress = document.getElementById('sess-wallet-address')!;
+    this.btnSessCopyAddress = document.getElementById('btn-sess-copy-address') as HTMLButtonElement;
+    this.sessKycStatusBadge = document.getElementById('sess-kyc-status-badge')!;
+    this.btnLoginClaimFaucet = document.getElementById('btn-login-claim-faucet') as HTMLButtonElement;
+
+    // KYC Submission Inside connected
+    this.kycRegistrationSubview = document.getElementById('sess-kyc-registration-subview')!;
+    this.kycCompletedSubview = document.getElementById('sess-kyc-completed-subview')!;
     this.regBioGroup = document.getElementById('reg-bio-group')!;
     this.regBioText = document.getElementById('reg-bio') as HTMLTextAreaElement;
-    
+
     this.dropzone = document.getElementById('nic-dropzone')!;
     this.fileInput = document.getElementById('nic-file-input') as HTMLInputElement;
     this.previewBox = document.getElementById('nic-preview-box')!;
@@ -113,60 +180,55 @@ export class LoginRegister {
     this.progressBarContainer = document.getElementById('nic-progress-bar-container')!;
     this.progressBarFill = document.getElementById('nic-progress-bar-fill')!;
     this.btnRemoveNic = document.getElementById('btn-remove-nic') as HTMLButtonElement;
-    
     this.btnSubmitReg = document.getElementById('btn-submit-registration') as HTMLButtonElement;
-    
-    this.completionStatusText = document.getElementById('register-completion-status-text')!;
     this.submittedDetailsBox = document.getElementById('register-submitted-details')!;
+
+    // Credentials Toggle
+    this.toggleKeysLabel = document.getElementById('login-toggle-keys')!;
+    this.keysChevron = document.getElementById('login-keys-chevron')!;
+    this.keysBox = document.getElementById('login-keys-box')!;
+    this.pubkeyHexArea = document.getElementById('login-pubkey-hex') as HTMLTextAreaElement;
+    this.privkeyHexArea = document.getElementById('login-privkey-hex') as HTMLTextAreaElement;
+    this.btnDisconnect = document.getElementById('btn-login-disconnect') as HTMLButtonElement;
   }
 
   private initEvents() {
-    // Login Click Events
-    this.btnGenerate.addEventListener('click', () => this.generateWallet());
-    this.btnDemoAdmin.addEventListener('click', () => this.loginDemoProfile(
-      '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042013c369ba077f7a330f47615b5e75248e53187fd49eed9df27205c24edf072b2aa14403420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9',
-      '3059301306072a8648ce3d020106082a8648ce3d03010703420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9',
-      'Admin Verifier'
-    ));
-    this.btnDemoVoter.addEventListener('click', () => this.loginDemoProfile(
-      '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042037d182389d0763c9898910cef4b767b083c6a1588565021e32e022851608f2c6a14403420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1',
-      '3059301306072a8648ce3d020106082a8648ce3d03010703420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1',
-      'Verified Voter'
-    ));
-    this.btnDemoCandidate.addEventListener('click', () => this.loginDemoProfile(
-      '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b0201010420bbad54903c36aa68d8705d620444ee2e2ffacc4fc53fbf5fbd531573781ad342a14403420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9',
-      '3059301306072a8648ce3d020106082a8648ce3d03010703420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9',
-      'Verified Candidate'
-    ));
-    this.btnConnectSubmit.addEventListener('click', () => this.importWalletKeys());
-    this.btnCopyAddress.addEventListener('click', () => this.copyAddress());
-    this.btnClaimAdminFaucet.addEventListener('click', () => this.claimAdminFaucet());
-    this.btnGoRegister.addEventListener('click', () => { window.location.hash = '#/register'; });
-    this.btnDisconnect.addEventListener('click', () => this.disconnectWallet());
-    this.toggleKeysLabel.addEventListener('click', () => this.toggleKeysDisplay());
+    // Tab switching
+    this.tabSignIn.addEventListener('click', () => this.switchTab('signin'));
+    this.tabSignUp.addEventListener('click', () => this.switchTab('signup'));
 
-    // Register Drag & Drop Events
-    this.regRoleSelect.addEventListener('change', () => this.handleRoleChange());
-    
+    // Auth events
+    this.btnLoginAuth.addEventListener('click', () => this.handleSignIn());
+    this.btnRegisterAuth.addEventListener('click', () => this.handleSignUp());
+    this.btnDisconnect.addEventListener('click', () => this.handleSignOut());
+
+    // Demo Logins
+    this.btnDemoAdmin.addEventListener('click', () => this.quickLogin('admin', 'admin'));
+    this.btnDemoVoter.addEventListener('click', () => this.quickLogin('voter', 'voter'));
+    this.btnDemoCandidate.addEventListener('click', () => this.quickLogin('candidate', 'candidate'));
+
+    // Wallet Generation & Claim Faucet
+    this.btnProfileGenerateWallet.addEventListener('click', () => this.generateWalletPostLogin());
+    this.btnSessCopyAddress.addEventListener('click', () => this.copyAddress());
+    this.btnLoginClaimFaucet.addEventListener('click', () => this.claimFaucetGas());
+
+    // Drag-and-drop file inputs
     this.dropzone.addEventListener('click', () => this.fileInput.click());
     this.fileInput.addEventListener('change', (e) => this.handleFileSelection(e));
-    
+
     this.dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       this.dropzone.style.borderColor = 'var(--color-secondary)';
       this.dropzone.style.background = 'rgba(0, 245, 212, 0.05)';
     });
-
     this.dropzone.addEventListener('dragleave', () => {
       this.dropzone.style.borderColor = 'var(--border-color)';
       this.dropzone.style.background = 'var(--bg-card)';
     });
-
     this.dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       this.dropzone.style.borderColor = 'var(--border-color)';
       this.dropzone.style.background = 'var(--bg-card)';
-      
       if (e.dataTransfer && e.dataTransfer.files.length > 0) {
         this.setFile(e.dataTransfer.files[0]);
       }
@@ -174,109 +236,193 @@ export class LoginRegister {
 
     this.btnRemoveNic.addEventListener('click', () => this.clearFileSelection());
     this.btnSubmitReg.addEventListener('click', () => this.submitKycProfile());
+    this.toggleKeysLabel.addEventListener('click', () => this.toggleKeysDisplay());
   }
 
-  // --- WALLET CONNECT LOGIC ---
-  private async generateWallet() {
+  private switchTab(mode: 'signin' | 'signup') {
+    if (mode === 'signin') {
+      this.tabSignIn.classList.add('active');
+      this.tabSignIn.style.borderBottomColor = 'var(--color-primary)';
+      this.tabSignUp.classList.remove('active');
+      this.tabSignUp.style.borderBottomColor = 'transparent';
+      this.signInForm.style.display = 'flex';
+      this.signUpForm.style.display = 'none';
+    } else {
+      this.tabSignUp.classList.add('active');
+      this.tabSignUp.style.borderBottomColor = 'var(--color-primary)';
+      this.tabSignIn.classList.remove('active');
+      this.tabSignIn.style.borderBottomColor = 'transparent';
+      this.signUpForm.style.display = 'flex';
+      this.signInForm.style.display = 'none';
+    }
+  }
+
+  // --- MOCK AUTHENTICATION SYSTEM ---
+  private handleSignIn() {
+    const username = this.loginUsernameInput.value.trim().toLowerCase();
+    const password = this.loginPasswordInput.value.trim();
+
+    if (!username || !password) {
+      this.app.showNotification('Please enter both username and password.', 'error');
+      return;
+    }
+
+    const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
+    const user = users[username];
+
+    if (!user || user.passwordHash !== password) {
+      this.app.showNotification('Invalid username or password credentials.', 'error');
+      return;
+    }
+
+    // Success Authentication
+    this.authenticateSession(user);
+  }
+
+  private handleSignUp() {
+    const username = this.registerUsernameInput.value.trim().toLowerCase();
+    const password = this.registerPasswordInput.value.trim();
+    const fullName = this.registerFullnameInput.value.trim();
+    const email = this.registerEmailInput.value.trim();
+    const role = this.registerRoleSelect.value as 'VOTER' | 'CANDIDATE';
+
+    if (!username || !password || !fullName || !email) {
+      this.app.showNotification('Please fill in all register fields.', 'error');
+      return;
+    }
+
+    if (username === 'admin' || username === 'voter' || username === 'candidate') {
+      this.app.showNotification('Reserved system username. Choose another.', 'error');
+      return;
+    }
+
+    const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
+    if (users[username]) {
+      this.app.showNotification('Username already registered.', 'error');
+      return;
+    }
+
+    // Save account
+    users[username] = {
+      username,
+      passwordHash: password,
+      role,
+      fullName,
+      email
+    };
+    localStorage.setItem('votechain_users', JSON.stringify(users));
+
+    this.app.showNotification('Account created successfully! Logging you in...', 'success');
+    this.registerUsernameInput.value = '';
+    this.registerPasswordInput.value = '';
+    this.registerFullnameInput.value = '';
+    this.registerEmailInput.value = '';
+
+    this.authenticateSession(users[username]);
+  }
+
+  private quickLogin(username: string, pass: string) {
+    this.loginUsernameInput.value = username;
+    this.loginPasswordInput.value = pass;
+    this.handleSignIn();
+  }
+
+  private async authenticateSession(profile: UserProfile) {
+    this.app.activeUser = profile;
+
+    // If wallet already exists in details, load it
+    if (profile.walletPrivateKey && profile.walletPublicKey) {
+      const w = new Wallet();
+      await w.importFromHex(profile.walletPrivateKey, profile.walletPublicKey);
+      this.app.wallet = w;
+    } else {
+      this.app.wallet = null;
+    }
+
+    this.loginUsernameInput.value = '';
+    this.loginPasswordInput.value = '';
+    this.isEditing = false;
+
+    this.app.showNotification(`Signed in successfully as ${profile.fullName}!`, 'success');
+    
+    // Redirect based on role
+    this.app.refreshAllViews();
+    
+    if (profile.role === 'ADMIN') {
+      window.location.hash = '#/admin';
+    } else if (profile.role === 'CANDIDATE') {
+      window.location.hash = '#/candidate';
+    } else {
+      window.location.hash = '#/voter';
+    }
+  }
+
+  private handleSignOut() {
+    this.app.activeUser = null;
+    this.app.wallet = null;
+    this.isEditing = false;
+    this.clearFileSelection();
+    
+    this.app.showNotification('Account signed out successfully.', 'info');
+    this.app.refreshAllViews();
+    window.location.hash = '#/login';
+  }
+
+  // --- CRYPTOGRAPHIC WALLET CREATION POST-LOGIN ---
+  private async generateWalletPostLogin() {
+    if (!this.app.activeUser) return;
     try {
-      this.btnGenerate.disabled = true;
-      this.btnGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Keys...';
-      
+      this.btnProfileGenerateWallet.disabled = true;
+      this.btnProfileGenerateWallet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Keys...';
+
       const w = new Wallet();
       await w.generate();
       this.app.wallet = w;
-      
+
+      // Persist the new wallet parameters in simulated user database
+      const users = JSON.parse(localStorage.getItem('votechain_users') || '{}');
+      const activeUser = this.app.activeUser;
+      if (users[activeUser.username]) {
+        users[activeUser.username].walletPrivateKey = w.privateKeyHex;
+        users[activeUser.username].walletPublicKey = w.publicKeyHex;
+        users[activeUser.username].walletAddress = w.address;
+        
+        // Sync local app state
+        this.app.activeUser = users[activeUser.username];
+        localStorage.setItem('votechain_users', JSON.stringify(users));
+      }
+
       this.app.showNotification('Asymmetric keypair generated via Web Crypto API!', 'success');
       this.app.refreshAllViews();
     } catch (e: any) {
       this.app.showNotification(`Key generation failed: ${e.message}`, 'error');
     } finally {
-      this.btnGenerate.disabled = false;
-      this.btnGenerate.innerHTML = '<i class="fa-solid fa-key"></i> Create New Wallet';
-    }
-  }
-
-  private async importWalletKeys() {
-    const priv = this.importPrivkeyInput.value.trim();
-    const pub = this.importPubkeyInput.value.trim();
-
-    if (!priv || !pub) {
-      this.app.showNotification('Please fill in both key hex exports.', 'error');
-      return;
-    }
-
-    try {
-      this.btnConnectSubmit.disabled = true;
-      this.btnConnectSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
-
-      const w = new Wallet();
-      await w.importFromHex(priv, pub);
-      this.app.wallet = w;
-
-      this.importPrivkeyInput.value = '';
-      this.importPubkeyInput.value = '';
-
-      this.app.showNotification('Wallet credentials imported successfully!', 'success');
-      this.app.refreshAllViews();
-    } catch (e) {
-      this.app.showNotification('Import failed: Check that hex formats are correct.', 'error');
-    } finally {
-      this.btnConnectSubmit.disabled = false;
-      this.btnConnectSubmit.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Connect Keys';
-    }
-  }
-
-  private async loginDemoProfile(privKey: string, pubKey: string, name: string) {
-    try {
-      const w = new Wallet();
-      await w.importFromHex(privKey, pubKey);
-      this.app.wallet = w;
-      this.isEditing = false;
-      this.app.showNotification(`Connected to Demo ${name} profile!`, 'success');
-      
-      const adminAddress = this.app.blockchain.adminAddress;
-      const isVerifierAdmin = w.address.toLowerCase() === adminAddress.toLowerCase();
-      
-      this.app.refreshAllViews();
-      if (isVerifierAdmin) {
-        window.location.hash = '#/admin';
-      } else {
-        const profile = this.app.blockchain.voterRegistry.get(w.address.toLowerCase());
-        if (profile && profile.role === 'CANDIDATE') {
-          window.location.hash = '#/candidate';
-        } else {
-          window.location.hash = '#/voter';
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      this.app.showNotification('Demo login failed.', 'error');
+      this.btnProfileGenerateWallet.disabled = false;
+      this.btnProfileGenerateWallet.innerHTML = '<i class="fa-solid fa-key"></i> Generate Wallet Key Pair';
     }
   }
 
   private copyAddress() {
     if (!this.app.wallet) return;
     navigator.clipboard.writeText(this.app.wallet.address).then(() => {
-      this.app.showNotification('Address copied to clipboard!');
+      this.app.showNotification('Derived Wallet Address copied to clipboard!', 'info');
     });
   }
 
-  private async claimAdminFaucet() {
+  private async claimFaucetGas() {
     if (!this.app.wallet) return;
-    
     try {
-      this.btnClaimAdminFaucet.disabled = true;
-      this.btnClaimAdminFaucet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Broadking claim...';
-      
-      const w = this.app.wallet;
-      const currentNonce = this.app.blockchain.getNonce(w.address);
+      this.btnLoginClaimFaucet.disabled = true;
+      this.btnLoginClaimFaucet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Requesting Faucet...';
 
+      const w = this.app.wallet;
+      const nonce = this.app.blockchain.getNonce(w.address);
       const tx = new Transaction({
         sender: w.address,
         recipient: '0x0000000000000000000000000000000000000000',
         type: 'CLAIM_FAUCET',
-        payload: { name: 'Admin Account' },
-        nonce: currentNonce,
+        payload: {},
+        nonce,
         timestamp: Date.now(),
         publicKey: w.publicKeyHex
       });
@@ -284,67 +430,41 @@ export class LoginRegister {
       await tx.signTransaction(w);
       await this.app.blockchain.addTransaction(tx);
 
-      this.app.showNotification('Faucet transaction broadcast. Go to Block Explorer to mine this block.', 'info');
+      this.app.showNotification('Faucet request queued in mempool! Go to explorer to mine it.', 'success');
       this.app.refreshAllViews();
     } catch (e: any) {
-      this.app.showNotification(`Claim failed: ${e.message}`, 'error');
+      this.app.showNotification(`Faucet failed: ${e.message}`, 'error');
     } finally {
-      this.btnClaimAdminFaucet.disabled = false;
-      this.btnClaimAdminFaucet.innerHTML = '<i class="fa-solid fa-crown"></i> Claim Admin Status (Faucet)';
+      this.btnLoginClaimFaucet.disabled = false;
+      this.btnLoginClaimFaucet.innerHTML = '<i class="fa-solid fa-coins"></i> Claim Faucet Tokens (Gas)';
     }
   }
 
-  private disconnectWallet() {
-    this.app.wallet = null;
-    this.uploadedImageUrl = '';
-    this.selectedFile = null;
-    this.isEditing = false;
-    this.app.showNotification('Wallet disconnected.', 'info');
-    window.location.hash = '#/';
-  }
-
-  private toggleKeysDisplay() {
-    const isVisible = this.keysBox.style.display === 'flex';
-    this.keysBox.style.display = isVisible ? 'none' : 'flex';
-    this.keysChevron.className = isVisible ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
-  }
-
-  // --- REGISTRATION LOGIC ---
-  private handleRoleChange() {
-    const isCandidate = this.regRoleSelect.value === 'CANDIDATE';
-    this.regBioGroup.style.display = isCandidate ? 'flex' : 'none';
-  }
-
+  // --- KYC SUBMISSION METHODS ---
   private handleFileSelection(e: Event) {
-    const target = e.target as HTMLInputElement;
-    if (target.files && target.files.length > 0) {
-      this.setFile(target.files[0]);
+    const input = e.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.setFile(input.files[0]);
     }
   }
 
   private setFile(file: File) {
     if (!file.type.startsWith('image/')) {
-      this.app.showNotification('Please upload an image file.', 'error');
+      this.app.showNotification('Only image files are allowed for NIC identification.', 'error');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      this.app.showNotification('File is too large. Max size is 5MB.', 'error');
-      return;
-    }
-
     this.selectedFile = file;
-    this.fileNameText.textContent = file.name;
-    this.uploadStatusText.textContent = 'Ready to upload.';
-    
-    // Display thumbnail preview
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      this.previewImage.src = e.target?.result as string;
+      if (e.target && typeof e.target.result === 'string') {
+        this.previewImage.src = e.target.result;
+        this.previewBox.style.display = 'flex';
+        this.fileNameText.textContent = file.name;
+        this.uploadStatusText.textContent = 'NIC loaded. Ready to sign.';
+      }
     };
     reader.readAsDataURL(file);
-
-    this.previewBox.style.display = 'flex';
-    this.uploadedImageUrl = '';
   }
 
   private clearFileSelection() {
@@ -357,21 +477,14 @@ export class LoginRegister {
     this.progressBarFill.style.width = '0%';
   }
 
-  /**
-   * Performs direct POST request to ImgBB and submits register transaction
-   */
   private async submitKycProfile() {
-    if (!this.app.wallet) return;
+    if (!this.app.wallet || !this.app.activeUser) return;
 
-    const name = this.regNameInput.value.trim();
-    const email = this.regEmailInput.value.trim();
-    const role = this.regRoleSelect.value;
+    const activeUser = this.app.activeUser;
+    const name = activeUser.fullName;
+    const email = activeUser.email;
+    const role = activeUser.role;
     const bio = this.regBioText.value.trim();
-
-    if (!name || !email) {
-      this.app.showNotification('Name and email are required.', 'error');
-      return;
-    }
 
     if (!this.selectedFile && !this.uploadedImageUrl) {
       this.app.showNotification('Please select or upload your National Identity Card (NIC) photo.', 'error');
@@ -388,7 +501,7 @@ export class LoginRegister {
         this.progressBarFill.style.width = '20%';
         this.uploadStatusText.textContent = 'Uploading image...';
 
-        const apiKey = import.meta.env.VITE_IMGBB_API_KEY || 'da1765c9c1b48ca59296e6d1eb7a003f';
+        const apiKey = import.meta.env.VITE_IMGBB_API_KEY || 'bbfda5a6eaea6c85b9c3125b4c8cc463';
 
         const formData = new FormData();
         formData.append('image', this.selectedFile);
@@ -442,14 +555,11 @@ export class LoginRegister {
         publicKey: w.publicKeyHex
       });
 
-      // Sign transaction
       await tx.signTransaction(w);
-
-      // Submit to mempool
       await this.app.blockchain.addTransaction(tx);
 
-      this.isEditing = false; // Reset editing state
-      this.app.showNotification('KYC application submitted! Transaction queued in mempool.', 'success');
+      this.isEditing = false;
+      this.app.showNotification('KYC application submitted! Queueing block mining...', 'success');
       this.app.refreshAllViews();
 
     } catch (e: any) {
@@ -463,143 +573,118 @@ export class LoginRegister {
     }
   }
 
+  private toggleKeysDisplay() {
+    const isHidden = this.keysBox.style.display === 'none';
+    if (isHidden) {
+      this.keysBox.style.display = 'flex';
+      this.keysChevron.classList.remove('fa-chevron-down');
+      this.keysChevron.classList.add('fa-chevron-up');
+    } else {
+      this.keysBox.style.display = 'none';
+      this.keysChevron.classList.remove('fa-chevron-up');
+      this.keysChevron.classList.add('fa-chevron-down');
+    }
+  }
+
   // --- RENDER LOGIC ---
   render() {
-    const isLoggedIn = this.app.wallet !== null;
+    const isLoggedIn = this.app.activeUser !== null;
     if (!isLoggedIn) {
       document.body.classList.add('logged-out');
-    } else {
-      document.body.classList.remove('logged-out');
-    }
-
-    // Login views sync
-    if (!isLoggedIn) {
       this.anonymousView.style.display = 'flex';
       this.connectedView.style.display = 'none';
-      
-      // Register unconnected warning sync
-      this.warningView.style.display = 'block';
-      this.formArea.style.display = 'none';
-      this.completedView.style.display = 'none';
       return;
     }
 
-    const w = this.app.wallet!;
+    document.body.classList.remove('logged-out');
     this.anonymousView.style.display = 'none';
     this.connectedView.style.display = 'flex';
-    
-    this.activeAddressText.textContent = w.address;
+
+    const user = this.app.activeUser!;
+    this.sessUsername.textContent = user.username;
+    this.sessFullname.textContent = user.fullName;
+    this.sessEmail.textContent = user.email;
+    this.sessRole.textContent = user.role;
+
+    // Wallet generation subviews check
+    const hasWallet = this.app.wallet !== null;
+    if (!hasWallet) {
+      this.walletDisconnectedSubview.style.display = 'flex';
+      this.walletConnectedSubview.style.display = 'none';
+      return;
+    }
+
+    this.walletDisconnectedSubview.style.display = 'none';
+    this.walletConnectedSubview.style.display = 'flex';
+
+    const w = this.app.wallet!;
+    this.sessWalletAddress.textContent = w.address;
     this.pubkeyHexArea.value = w.publicKeyHex;
     this.privkeyHexArea.value = w.privateKeyHex;
 
-    // Determine verification status badge
-    const adminAddress = this.app.blockchain.adminAddress;
-    const isVerifierAdmin = adminAddress && w.address.toLowerCase() === adminAddress.toLowerCase();
-    
+    // Toggle faucet button based on roles (all users can claim faucet, but only if they need gas)
+    this.btnLoginClaimFaucet.style.display = 'block';
+
+    // Sync KYC status views
     const profile = this.app.blockchain.voterRegistry.get(w.address.toLowerCase());
-
-    this.warningView.style.display = 'none';
-    this.btnClaimAdminFaucet.style.display = 'none';
-    this.btnGoRegister.style.display = 'none';
-
-    // Renders verification status badge in Connect Wallet page
-    if (isVerifierAdmin) {
-      this.statusBadge.innerHTML = `
-        <i class="fa-solid fa-shield-check" style="color: var(--color-secondary);"></i>
-        <span style="color: var(--color-secondary);">System Admin Verifier</span>
-      `;
-    } else if (profile) {
-      if (profile.status === 'VERIFIED') {
-        this.statusBadge.innerHTML = `
-          <i class="fa-solid fa-circle-check" style="color: var(--color-secondary);"></i>
-          <span style="color: var(--color-secondary);">On-Chain Verified Voter</span>
-        `;
-      } else if (profile.status === 'REJECTED') {
-        this.statusBadge.innerHTML = `
-          <i class="fa-solid fa-circle-xmark" style="color: var(--color-danger);"></i>
-          <span style="color: var(--color-danger);">KYC Verification Rejected</span>
-        `;
-        this.btnGoRegister.style.display = 'inline-flex';
-      } else {
-        this.statusBadge.innerHTML = `
-          <i class="fa-solid fa-clock" style="color: #ffaa00;"></i>
-          <span style="color: #ffaa00;">Verification Pending approval</span>
-        `;
-      }
+    
+    // Bio element role toggle
+    if (user.role === 'CANDIDATE') {
+      this.regBioGroup.style.display = 'flex';
     } else {
-      this.statusBadge.innerHTML = `
-        <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-danger);"></i>
-        <span style="color: var(--color-danger);">No KYC Profile Registered</span>
-      `;
-      this.btnGoRegister.style.display = 'inline-flex';
-      
-      // If blockchain has no Admin, show claim admin button for demo convenience
-      if (!adminAddress) {
-        this.btnClaimAdminFaucet.style.display = 'inline-flex';
-        
-        // If claiming is already pending in mempool
-        const isFaucetPending = this.app.blockchain.pendingTransactions.some(
-          t => t.sender.toLowerCase() === w.address.toLowerCase() && t.type === 'CLAIM_FAUCET'
-        );
-        this.btnClaimAdminFaucet.disabled = isFaucetPending;
-        if (isFaucetPending) {
-          this.btnClaimAdminFaucet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mining claim...';
-        } else {
-          this.btnClaimAdminFaucet.innerHTML = '<i class="fa-solid fa-crown"></i> Claim Admin Status (Faucet)';
-        }
-      }
+      this.regBioGroup.style.display = 'none';
     }
 
-    // Register Form Sync
-    if (profile && !this.isEditing) {
-      this.formArea.style.display = 'none';
-      this.completedView.style.display = 'block';
-
-      this.completionStatusText.textContent = profile.status === 'VERIFIED' 
-        ? 'Your KYC credentials are verified and active on the block ledger.'
-        : profile.status === 'REJECTED'
-        ? 'Your KYC application was rejected by the System Verifier Admin. Please click Edit below to update details and re-apply.'
-        : 'Your identity profile is currently pending verification audits from the System Admin.';
-        
-      this.submittedDetailsBox.innerHTML = `
-        <div><strong>Name:</strong> ${profile.name}</div>
-        <div><strong>Email:</strong> ${profile.email}</div>
-        <div><strong>Role Nominated:</strong> ${profile.role}</div>
-        ${profile.bio ? `<div><strong>Manifesto:</strong> ${profile.bio}</div>` : ''}
-        <div><strong>KYC Status:</strong> <span style="font-weight:700; color: ${profile.status === 'VERIFIED' ? 'var(--color-secondary)' : '#ffaa00'};">${profile.status}</span></div>
-        <div style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.25rem;">
-          <strong>NIC ID Photo:</strong>
-          <a href="${profile.nicPhoto}" target="_blank" style="color: var(--color-secondary); text-decoration:none;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Hosted Photo Link (ImgBB)</a>
-          <img src="${profile.nicPhoto}" style="max-height:100px; width:fit-content; border:1px solid var(--border-color); margin-top:0.25rem;" />
-        </div>
-        <button id="btn-edit-kyc" class="btn" style="margin-top: 1rem; width: 100%; padding: 0.5rem; font-size: 0.85rem;"><i class="fa-solid fa-user-pen"></i> Edit Profile Details</button>
-      `;
-
-      // Bind edit button
-      const editBtn = document.getElementById('btn-edit-kyc') as HTMLButtonElement;
-      if (editBtn) {
-        editBtn.addEventListener('click', () => {
-          this.isEditing = true;
-          this.regNameInput.value = profile.name;
-          this.regEmailInput.value = profile.email;
-          this.regRoleSelect.value = profile.role;
-          if (profile.role === 'CANDIDATE') {
-            this.regBioText.value = profile.bio || '';
-          }
-          this.uploadedImageUrl = profile.nicPhoto;
-          this.previewImage.src = profile.nicPhoto;
-          this.fileNameText.textContent = "Current Hosted Image on ImgBB";
-          this.uploadStatusText.textContent = "Using existing photo. Upload a new file to change.";
-          this.previewBox.style.display = 'flex';
-          this.app.refreshAllViews();
-        });
+    if (!profile || this.isEditing) {
+      // Form submission layout
+      this.kycRegistrationSubview.style.display = 'flex';
+      this.kycCompletedSubview.style.display = 'none';
+      
+      if (profile && this.isEditing) {
+        this.regBioText.value = profile.bio || '';
+        this.uploadedImageUrl = profile.nicPhoto;
+        this.previewImage.src = profile.nicPhoto;
+        this.previewBox.style.display = 'flex';
+        this.fileNameText.textContent = 'Recycled current photo';
+        this.uploadStatusText.textContent = 'Current photo loaded. Re-upload drag zone optional.';
       }
     } else {
-      this.formArea.style.display = 'flex';
-      this.completedView.style.display = 'none';
-      
-      this.regWalletInput.value = w.address;
-      this.handleRoleChange(); // sync role inputs bio display
+      // Submitted layout
+      this.kycRegistrationSubview.style.display = 'none';
+      this.kycCompletedSubview.style.display = 'flex';
+
+      const badge = this.sessKycStatusBadge;
+      badge.className = '';
+      badge.style.display = 'inline-flex';
+
+      if (profile.status === 'VERIFIED') {
+        badge.innerHTML = '<i class="fa-solid fa-circle-check" style="color: var(--color-secondary);"></i> Verified On-Chain';
+        badge.style.color = 'var(--color-secondary)';
+      } else if (profile.status === 'REJECTED') {
+        badge.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color: var(--color-danger);"></i> Application Rejected';
+        badge.style.color = 'var(--color-danger)';
+      } else {
+        badge.innerHTML = '<i class="fa-solid fa-hourglass-half" style="color: var(--color-primary);"></i> Audit Pending';
+        badge.style.color = 'var(--color-primary)';
+      }
+
+      this.submittedDetailsBox.innerHTML = `
+        <div><strong>Name on Record:</strong> ${profile.name}</div>
+        <div><strong>Email Address:</strong> ${profile.email}</div>
+        <div><strong>Registered Role:</strong> ${profile.role}</div>
+        ${profile.bio ? `<div><strong>Manifesto:</strong> "${profile.bio}"</div>` : ''}
+        <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
+          <strong>NIC ID Card File:</strong>
+          <img src="${profile.nicPhoto}" alt="NIC" style="width: 100%; max-height: 120px; object-fit: contain; border: 1px solid var(--border-color); background: var(--bg-main);" />
+        </div>
+        <button id="btn-edit-profile" class="btn btn-secondary" style="margin-top: 0.75rem; font-size: 0.8rem; padding: 0.4rem 0.75rem;"><i class="fa-solid fa-user-pen"></i> Edit Profile Details</button>
+      `;
+
+      // Bind edit button click handler
+      document.getElementById('btn-edit-profile')?.addEventListener('click', () => {
+        this.isEditing = true;
+        this.render();
+      });
     }
   }
 }

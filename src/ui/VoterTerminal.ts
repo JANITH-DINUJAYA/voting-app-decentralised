@@ -157,7 +157,7 @@ export class VoterTerminal {
 
     // Wallet checks
     if (!this.app.wallet) {
-      this.radioContainer.innerHTML = '<p style="color: var(--color-danger);"><i class="fa-solid fa-wallet"></i> Wallet not generated. Access the "Connect Wallet" page to get started.</p>';
+      this.radioContainer.innerHTML = '<p style="color: var(--color-danger);"><i class="fa-solid fa-wallet"></i> Wallet not generated. Access the "Profile Session" page to generate your cryptographic keys.</p>';
       this.existingVoteBox.style.display = 'none';
       this.btnSubmitVote.disabled = true;
       this.btnSubmitVote.textContent = 'Wallet Disconnected';
@@ -170,7 +170,7 @@ export class VoterTerminal {
     const profile = this.app.blockchain.voterRegistry.get(wallet.address.toLowerCase());
     const isVerified = profile ? profile.status === 'VERIFIED' : false;
     if (!isVerified) {
-      this.radioContainer.innerHTML = '<p style="color: var(--color-danger);"><i class="fa-solid fa-circle-exclamation"></i> KYC Verification required. Please register your profile and wait for verifier approval.</p>';
+      this.radioContainer.innerHTML = '<p style="color: var(--color-danger);"><i class="fa-solid fa-circle-exclamation"></i> KYC Verification required. Please go to your "Profile Session" page to submit your identity card and wait for approval.</p>';
       this.existingVoteBox.style.display = 'none';
       this.btnSubmitVote.disabled = true;
       this.btnSubmitVote.textContent = 'Verification Required';

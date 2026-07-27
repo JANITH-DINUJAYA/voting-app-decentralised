@@ -13,29 +13,48 @@ export class Router {
    * Evaluates location hash and activates correct page layout panel
    */
   public handleRouting() {
-    let hash = window.location.hash || '#/';
+    let hash = window.location.hash || '#/login';
 
-    // Route Guards check
-    const isLoggedIn = this.app.wallet !== null;
-    const adminAddress = this.app.blockchain.adminAddress;
-    const isVerifierAdmin = isLoggedIn && adminAddress && this.app.wallet!.address.toLowerCase() === adminAddress.toLowerCase();
+    const isLoggedIn = this.app.activeUser !== null;
+    const userRole = isLoggedIn ? this.app.activeUser!.role : null;
 
-    // 1. Enforce Navigation Rules
-    if (!isLoggedIn && hash !== '#/login' && hash !== '#/register') {
-      window.location.hash = '#/login';
-      return;
-    }
+    // 1. Enforce Gated Navigation Rules
+    if (!isLoggedIn) {
+      if (hash !== '#/login') {
+        window.location.hash = '#/login';
+        return;
+      }
+    } else {
+      // If logged in, protect role-based sections
+      if (hash === '#/login' && userRole === 'ADMIN') {
+        // Redirect Admin away from login screen to admin dashboard
+        window.location.hash = '#/admin';
+        return;
+      }
 
-    if (isLoggedIn && hash === '#/admin' && !isVerifierAdmin) {
-      this.app.showNotification('Access Denied: Admin role required for this panel.', 'error');
-      window.location.hash = '#/voter';
-      return;
-    }
+      if (hash === '#/admin' && userRole !== 'ADMIN') {
+        this.app.showNotification('Access Denied: Admin role required.', 'error');
+        window.location.hash = userRole === 'CANDIDATE' ? '#/candidate' : '#/voter';
+        return;
+      }
 
-    if (isLoggedIn && hash === '#/verifier' && !isVerifierAdmin) {
-      this.app.showNotification('Access Denied: Authorized Verifier key required.', 'error');
-      window.location.hash = '#/voter';
-      return;
+      if (hash === '#/verifier' && userRole !== 'ADMIN') {
+        this.app.showNotification('Access Denied: Verifier privileges required.', 'error');
+        window.location.hash = userRole === 'CANDIDATE' ? '#/candidate' : '#/voter';
+        return;
+      }
+
+      if (hash === '#/voter' && userRole !== 'VOTER') {
+        this.app.showNotification('Access Denied: Voter profile required.', 'error');
+        window.location.hash = userRole === 'ADMIN' ? '#/admin' : '#/candidate';
+        return;
+      }
+
+      if (hash === '#/candidate' && userRole !== 'CANDIDATE') {
+        this.app.showNotification('Access Denied: Candidate profile required.', 'error');
+        window.location.hash = userRole === 'ADMIN' ? '#/admin' : '#/voter';
+        return;
+      }
     }
 
     // 2. Hide all panels first
@@ -47,7 +66,7 @@ export class Router {
     navItems.forEach(n => n.classList.remove('active'));
 
     // Map Hash to Panel ID
-    let panelId = 'dashboard'; // fallback public landing
+    let panelId = 'login';
     
     switch (hash) {
       case '#/':
@@ -55,9 +74,6 @@ export class Router {
         break;
       case '#/login':
         panelId = 'login';
-        break;
-      case '#/register':
-        panelId = 'register';
         break;
       case '#/voter':
         panelId = 'voter-terminal';
@@ -81,7 +97,7 @@ export class Router {
         panelId = 'diagnostics';
         break;
       default:
-        panelId = 'welcome';
+        panelId = isLoggedIn ? 'welcome' : 'login';
         break;
     }
 
@@ -105,57 +121,47 @@ export class Router {
   }
 
   /**
-   * Shows or hides menu navigation triggers depending on active wallet login
+   * Shows or hides menu navigation triggers depending on active session state
    */
   public updateNavigationSidebarLayout() {
-    const isLoggedIn = this.app.wallet !== null;
-    const adminAddress = this.app.blockchain.adminAddress;
-    const isVerifierAdmin = isLoggedIn && adminAddress && this.app.wallet!.address.toLowerCase() === adminAddress.toLowerCase();
+    const isLoggedIn = this.app.activeUser !== null;
+    const userRole = isLoggedIn ? this.app.activeUser!.role : null;
 
     // Elements
     const navLogin = document.querySelector('.nav-item[href="#/login"]') as HTMLElement;
-    const navRegister = document.querySelector('.nav-item[href="#/register"]') as HTMLElement;
+    const navHome = document.querySelector('.nav-item[href="#/"]') as HTMLElement;
     const navVoter = document.querySelector('.nav-item[href="#/voter"]') as HTMLElement;
     const navCandidate = document.querySelector('.nav-item[href="#/candidate"]') as HTMLElement;
     const navAdmin = document.querySelector('.nav-item[href="#/admin"]') as HTMLElement;
     const navVerifier = document.querySelector('.nav-item[href="#/verifier"]') as HTMLElement;
-    
+    const navExplorer = document.querySelector('.nav-item[href="#/explorer"]') as HTMLElement;
+    const navTamper = document.querySelector('.nav-item[href="#/tamper"]') as HTMLElement;
+    const navDiag = document.querySelector('.nav-item[href="#/diagnostics"]') as HTMLElement;
+
     if (navLogin) {
       if (isLoggedIn) {
-        navLogin.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i> Disconnect';
-        navLogin.style.color = 'var(--color-danger)';
+        navLogin.innerHTML = '<i class="fa-solid fa-circle-user"></i> Profile Session';
+        navLogin.style.color = 'var(--color-secondary)';
       } else {
-        navLogin.innerHTML = '<i class="fa-solid fa-wallet"></i> Connect Wallet';
+        navLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login / Sign Up';
         navLogin.style.color = '';
       }
     }
 
-    if (navRegister) navRegister.style.display = isLoggedIn ? 'none' : 'flex';
+    if (navHome) navHome.style.display = isLoggedIn ? 'flex' : 'none';
+    if (navVoter) navVoter.style.display = (isLoggedIn && userRole === 'VOTER') ? 'flex' : 'none';
+    if (navCandidate) navCandidate.style.display = (isLoggedIn && userRole === 'CANDIDATE') ? 'flex' : 'none';
     
-    // Voter portal displays only when logged in as non-admin
-    if (navVoter) {
-      navVoter.style.display = isLoggedIn ? 'flex' : 'none';
-      if (isVerifierAdmin) navVoter.style.display = 'none'; // Admin shouldn't vote in normal candidate views
-    }
-
-    // Candidate portal displays only when candidate logs in
-    if (navCandidate) {
-      let isCandidate = false;
-      if (isLoggedIn) {
-        const profile = this.app.blockchain.voterRegistry.get(this.app.wallet!.address.toLowerCase());
-        isCandidate = profile ? profile.role === 'CANDIDATE' : false;
-      }
-      navCandidate.style.display = isCandidate ? 'flex' : 'none';
-    }
-
     // Admin & Verifier screens visible only to Admin
-    if (navAdmin) navAdmin.style.display = isVerifierAdmin ? 'flex' : 'none';
-    if (navVerifier) navVerifier.style.display = isVerifierAdmin ? 'flex' : 'none';
+    if (navAdmin) navAdmin.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
+    if (navVerifier) navVerifier.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
+
+    // Explorer, Tamper, Diagnostics visible to all logged-in profiles
+    if (navExplorer) navExplorer.style.display = isLoggedIn ? 'flex' : 'none';
+    if (navTamper) navTamper.style.display = isLoggedIn ? 'flex' : 'none';
+    if (navDiag) navDiag.style.display = isLoggedIn ? 'flex' : 'none';
   }
 
-  /**
-   * Navigate code helper
-   */
   navigate(hash: string) {
     window.location.hash = hash;
   }
