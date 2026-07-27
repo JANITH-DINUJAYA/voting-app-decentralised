@@ -1033,3 +1033,26 @@ input::placeholder, textarea::placeholder {
     grid-template-columns: 1fr;
   }
 }
+
+/* Gated Login Screen View Styles */
+body.logged-out header {
+  display: none !important;
+}
+
+body.logged-out .app-container {
+  grid-template-columns: 1fr !important;
+  justify-content: center;
+  align-items: center;
+  min-height: 90vh;
+  max-width: 560px !important;
+  margin: 2rem auto !important;
+  padding: 0 1rem;
+}
+
+body.logged-out aside.sidebar {
+  display: none !important;
+}
+
+body.logged-out main {
+  width: 100%;
+}

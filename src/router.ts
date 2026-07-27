@@ -21,13 +21,7 @@ export class Router {
     const isVerifierAdmin = isLoggedIn && adminAddress && this.app.wallet!.address.toLowerCase() === adminAddress.toLowerCase();
 
     // 1. Enforce Navigation Rules
-    if (!isLoggedIn && (
-      hash === '#/voter' || 
-      hash === '#/candidate' || 
-      hash === '#/admin' || 
-      hash === '#/verifier'
-    )) {
-      this.app.showNotification('Access Denied: Wallet connection required. Redirecting to Login...', 'error');
+    if (!isLoggedIn && hash !== '#/login' && hash !== '#/register') {
       window.location.hash = '#/login';
       return;
     }

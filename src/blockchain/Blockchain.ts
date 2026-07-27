@@ -12,7 +12,7 @@ export class Blockchain {
   public contracts: Map<string, ElectionContract> = new Map();
   public nonces: Map<string, number> = new Map();
   public verifiedAddresses: Set<string> = new Set(); // System-wide registered voter accounts
-  public adminAddress: string = '';
+  public adminAddress: string = '0xe513658465d6997d28be6460851b77dc703bf13a';
   public voterRegistry: Map<string, {
     name: string;
     email: string;
@@ -25,6 +25,39 @@ export class Blockchain {
   constructor() {
     this.chain = [this.createGenesisBlock()];
     this.nonces.set('0x0000000000000000000000000000000000000000', 0);
+
+    // Pre-seed Admin Verifier
+    this.verifiedAddresses.add(this.adminAddress);
+    this.voterRegistry.set(this.adminAddress, {
+      name: 'System Admin',
+      email: 'admin@votechain.net',
+      nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
+      status: 'VERIFIED',
+      role: 'VOTER'
+    });
+
+    // Pre-seed Demo Voter
+    const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
+    this.verifiedAddresses.add(demoVoter);
+    this.voterRegistry.set(demoVoter, {
+      name: 'Demo Voter',
+      email: 'voter@votechain.net',
+      nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
+      status: 'VERIFIED',
+      role: 'VOTER'
+    });
+
+    // Pre-seed Demo Candidate
+    const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
+    this.verifiedAddresses.add(demoCandidate);
+    this.voterRegistry.set(demoCandidate, {
+      name: 'Demo Candidate',
+      email: 'candidate@votechain.net',
+      nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
+      status: 'VERIFIED',
+      role: 'CANDIDATE',
+      bio: 'Committed to absolute on-chain auditing and open data governance.'
+    });
   }
 
   /**
@@ -173,17 +206,7 @@ export class Blockchain {
 
     switch (tx.type) {
       case 'CLAIM_FAUCET':
-        if (!this.adminAddress) {
-          this.adminAddress = sender;
-        }
-        this.verifiedAddresses.add(sender);
-        this.voterRegistry.set(sender, {
-          name: 'System Admin',
-          email: 'admin@votechain.net',
-          nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
-          status: 'VERIFIED',
-          role: 'VOTER'
-        });
+        // Faucet gives normal voter/candidate simulated gas tokens. They must verify via KYC.
         break;
 
       case 'REGISTER_VOTER_KYC':

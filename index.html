@@ -144,6 +144,17 @@
               <div class="form-row">
                 <button id="btn-login-generate" class="btn"><i class="fa-solid fa-key"></i> Create New Wallet</button>
               </div>
+
+              <!-- Quick Demo Profiles Section -->
+              <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-bolt" style="color: var(--color-secondary);"></i> Quick Demo Sandbox Logins</h3>
+                <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: -0.25rem;">Connect instantly as pre-seeded cryptographic profiles to audit the pipeline.</p>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+                  <button id="btn-demo-admin" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem;"><i class="fa-solid fa-user-shield"></i> Admin Portal</button>
+                  <button id="btn-demo-voter" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem;"><i class="fa-solid fa-check-to-slot"></i> Demo Voter</button>
+                  <button id="btn-demo-candidate" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.5rem;"><i class="fa-solid fa-user-tag"></i> Demo Candidate</button>
+                </div>
+              </div>
               
               <div style="border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                 <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-lock"></i> Import Private Credentials</h3>
@@ -156,6 +167,11 @@
                   <input type="text" id="login-pubkey" placeholder="Paste public key hex here..." />
                 </div>
                 <button id="btn-login-submit" class="btn btn-secondary"><i class="fa-solid fa-right-to-bracket"></i> Connect Keys</button>
+              </div>
+
+              <div style="text-align: center; border-top: 1px solid rgba(157, 78, 221, 0.1); padding-top: 1rem; font-size: 0.85rem;">
+                <span style="color: var(--color-text-muted);">Need a new identity?</span>
+                <a href="#/register" style="color: var(--color-primary); text-decoration: none; font-weight: 600; margin-left: 0.25rem;"><i class="fa-solid fa-user-plus"></i> Submit KYC Registration</a>
               </div>
             </div>
 
@@ -179,7 +195,7 @@
                 </div>
 
                 <div class="form-group" style="justify-content: flex-end; align-items: flex-end;">
-                  <button id="btn-login-claim-faucet" class="btn btn-secondary" style="display: none;"><i class="fa-solid fa-crown"></i> Claim Admin Status (Faucet)</button>
+                  <button id="btn-login-claim-faucet" class="btn btn-secondary" style="display: none;"><i class="fa-solid fa-coins"></i> Claim Faucet Tokens (Gas)</button>
                   <button id="btn-login-go-register" class="btn" style="display: none;"><i class="fa-solid fa-address-card"></i> Register KYC Profile</button>
                 </div>
               </div>
