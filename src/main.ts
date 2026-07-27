@@ -43,7 +43,30 @@ export class App {
 
   constructor() {
     this.blockchain = new Blockchain();
+    this.restoreSession();
     this.init();
+  }
+
+  private restoreSession() {
+    try {
+      const stored = sessionStorage.getItem('votechain_session');
+      if (!stored) return;
+
+      const user = JSON.parse(stored) as UserProfile;
+      this.activeUser = user;
+
+      if (user && user.walletPrivateKey && user.walletPublicKey) {
+        const w = new Wallet();
+        w.importFromHex(user.walletPrivateKey, user.walletPublicKey).then(() => {
+          this.wallet = w;
+          this.refreshAllViews();
+        }).catch(err => {
+          console.error('Failed to import wallet from session:', err);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to restore session:', e);
+    }
   }
 
   private init() {

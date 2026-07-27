@@ -455,6 +455,8 @@ export class LoginRegister {
         walletPublicKey: w.publicKeyHex
       };
 
+      sessionStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
+
       this.app.showNotification('Wallet generated and linked to Neon database profile!', 'success');
       this.app.refreshAllViews();
     } catch (e: any) {
@@ -611,6 +613,8 @@ export class LoginRegister {
       this.app.activeUser.nicPhoto = this.uploadedImageUrl;
       this.app.activeUser.kycStatus = 'PENDING';
       this.app.activeUser.bio = bio || '';
+
+      sessionStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
 
       // 2. Build Transaction
       this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing KYC Registry...';
