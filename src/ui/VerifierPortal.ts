@@ -80,24 +80,95 @@ export class VerifierPortal {
     }
   }
 
+  private pendingApplications: { address: string; name: string; email: string; nicPhoto: string; role: string; bio?: string }[] = [];
+  private isLoading: boolean = false;
+
+  /**
+   * Fetches pending applications from database, mempool, and blockchain registry
+   */
+  public async fetchPendingKyc() {
+    if (this.isLoading) return;
+    this.isLoading = true;
+    this.render();
+
+    // 1. Get from local mempool
+    const localPending = this.app.blockchain.pendingTransactions
+      .filter(t => t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
+      .map(t => ({
+        address: t.sender,
+        name: t.payload.name,
+        email: t.payload.email,
+        nicPhoto: t.payload.nicPhoto,
+        role: t.type === 'REGISTER_CANDIDATE_KYC' ? 'CANDIDATE' : 'VOTER',
+        bio: t.payload.bio
+      }));
+
+    // 2. Get from blockchain voterRegistry
+    const blockchainPending: typeof localPending = [];
+    this.app.blockchain.voterRegistry.forEach((profile, address) => {
+      if (profile.status === 'PENDING') {
+        blockchainPending.push({
+          address,
+          name: profile.name,
+          email: profile.email,
+          nicPhoto: profile.nicPhoto,
+          role: profile.role,
+          bio: profile.bio
+        });
+      }
+    });
+
+    // 3. Fetch from Neon database
+    let dbPending: typeof localPending = [];
+    try {
+      const res = await fetch('/api/pending-kyc');
+      if (res.ok) {
+        const data = await res.json();
+        dbPending = data.map((d: any) => ({
+          address: d.walletAddress,
+          name: d.fullName,
+          email: d.email,
+          nicPhoto: d.nicPhoto,
+          role: d.role,
+          bio: d.bio
+        }));
+      }
+    } catch (err) {
+      console.warn('Database fetch failed, relying on ledger:', err);
+    }
+
+    // Merge and deduplicate by address
+    const merged = [...localPending, ...blockchainPending, ...dbPending];
+    const seen = new Set<string>();
+    this.pendingApplications = merged.filter(app => {
+      if (!app.address) return false;
+      const addr = app.address.toLowerCase();
+      if (seen.has(addr)) return false;
+      seen.add(addr);
+      return true;
+    });
+
+    this.isLoading = false;
+    this.render();
+  }
+
   /**
    * Render pending registrations
    */
   render() {
     this.container.innerHTML = '';
-    
-    // Select all pending applications
-    const pendingApps: { address: string; name: string; email: string; nicPhoto: string; role: string; bio?: string }[] = [];
-    this.app.blockchain.voterRegistry.forEach((profile, address) => {
-      if (profile.status === 'PENDING') {
-        pendingApps.push({
-          address,
-          ...profile
-        });
-      }
-    });
 
-    if (pendingApps.length === 0) {
+    if (this.isLoading) {
+      this.container.innerHTML = `
+        <div style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--color-primary);"></i>
+          <p>Querying pending identity records from Neon...</p>
+        </div>
+      `;
+      return;
+    }
+    
+    if (this.pendingApplications.length === 0) {
       this.container.innerHTML = `
         <div style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
           <i class="fa-solid fa-inbox" style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--color-primary);"></i>
@@ -107,7 +178,7 @@ export class VerifierPortal {
       return;
     }
 
-    pendingApps.forEach(app => {
+    this.pendingApplications.forEach(app => {
       const card = document.createElement('div');
       card.className = 'kyc-application-card';
 

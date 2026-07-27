@@ -141,7 +141,7 @@ export class App {
         this.adminPanel.render();
         break;
       case '#/verifier':
-        this.verifierPortal.render();
+        this.verifierPortal.fetchPendingKyc();
         break;
       case '#/explorer':
         this.explorer.render();
