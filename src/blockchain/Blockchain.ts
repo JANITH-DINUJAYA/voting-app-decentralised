@@ -37,7 +37,7 @@ export class Blockchain {
     });
 
     // Pre-seed Demo Voter
-    const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
+    const demoVoter = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3';
     this.verifiedAddresses.add(demoVoter);
     this.voterRegistry.set(demoVoter, {
       name: 'Demo Voter',
@@ -48,7 +48,7 @@ export class Blockchain {
     });
 
     // Pre-seed Demo Candidate
-    const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
+    const demoCandidate = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d';
     this.verifiedAddresses.add(demoCandidate);
     this.voterRegistry.set(demoCandidate, {
       name: 'Demo Candidate',
@@ -721,7 +721,7 @@ export class Blockchain {
         role: 'ADMIN'
       });
 
-      const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
+      const demoVoter = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3';
       this.verifiedAddresses.add(demoVoter);
       this.voterRegistry.set(demoVoter, {
         name: 'Demo Voter',
@@ -731,7 +731,7 @@ export class Blockchain {
         role: 'VOTER'
       });
 
-      const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
+      const demoCandidate = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d';
       this.verifiedAddresses.add(demoCandidate);
       this.voterRegistry.set(demoCandidate, {
         name: 'Demo Candidate',
@@ -826,7 +826,7 @@ export class Blockchain {
             role: 'ADMIN'
           });
           
-          const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
+          const demoVoter = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3';
           this.verifiedAddresses.add(demoVoter);
           this.voterRegistry.set(demoVoter, {
             name: 'Demo Voter',
@@ -836,7 +836,7 @@ export class Blockchain {
             role: 'VOTER'
           });
 
-          const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
+          const demoCandidate = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d';
           this.verifiedAddresses.add(demoCandidate);
           this.voterRegistry.set(demoCandidate, {
             name: 'Demo Candidate',

@@ -91,6 +91,7 @@ export async function initializeDatabase() {
   await sql`
     UPDATE users 
     SET 
+      wallet_address = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3',
       kyc_status = 'VERIFIED',
       nic_photo = 'https://i.ibb.co/ZKgHq6F/voter-card.png'
     WHERE username = 'voter'
@@ -99,6 +100,7 @@ export async function initializeDatabase() {
   await sql`
     UPDATE users 
     SET 
+      wallet_address = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d',
       kyc_status = 'VERIFIED',
       nic_photo = 'https://i.ibb.co/f464JcT/candidate-card.png',
       bio = 'Committed to absolute on-chain auditing and open data governance.'
@@ -138,7 +140,7 @@ export async function initializeDatabase() {
         'VOTER', 
         'Demo Voter Profile', 
         'voter@votechain.net', 
-        '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91',
+        '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3',
         '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042037d182389d0763c9898910cef4b767b083c6a1588565021e32e022851608f2c6a14403420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1',
         '3059301306072a8648ce3d020106082a8648ce3d03010703420004dfb2a82844c4f6f6b0ce4c11bda1cdbd404201787f6ba69692ea9de98412e8ea7fd4ee32891c1e40ea89d9a3e2ed9314c21dcc3600ece8a527fb86e1d658d4d1',
         'VERIFIED',
@@ -155,7 +157,7 @@ export async function initializeDatabase() {
         'CANDIDATE', 
         'Demo Candidate platform', 
         'candidate@votechain.net', 
-        '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb',
+        '0x88206e119689b5ba9bf4f650e13b7680d448ad4d',
         '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b0201010420bbad54903c36aa68d8705d620444ee2e2ffacc4fc53fbf5fbd531573781ad342a14403420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9',
         '3059301306072a8648ce3d020106082a8648ce3d03010703420004fa6f63b3486b75e8ac8308008a2c78d4cefb55a946b83586c0c100259fc2798fdb8faaf9e88428856df4f594e224d008efc4b2208c840559cb754cb6a022aeb9',
         'VERIFIED',
