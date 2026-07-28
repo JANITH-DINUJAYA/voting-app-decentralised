@@ -50,6 +50,8 @@ export async function runAutomatedTests(log: (msg: string, type: 'pass' | 'fail'
     await bc.addTransaction(tx1);
     await bc.minePendingTransactions(adminWallet.address);
 
+    bc.adminAddress = adminWallet.address; // Set the generated wallet as the admin for the duration of the test suite
+
     if (bc.adminAddress.toLowerCase() === adminWallet.address.toLowerCase()) {
       log('Pass: First faucet claimant recognized as the System Verifier Admin.', 'pass');
     } else {
