@@ -682,7 +682,16 @@ export class App {
     if (adminElectionsEl) adminElectionsEl.textContent = this.blockchain.contracts.size.toString();
 
     if (adminPendingEl) {
-      const pending = Array.from(this.blockchain.voterRegistry.values()).filter(p => p.status === 'PENDING').length;
+      // Exclude addresses that already have a pending VERIFY_IDENTITY tx (approved but not mined yet)
+      const addressesBeingVerified = new Set(
+        this.blockchain.pendingTransactions
+          .filter(t => t.type === 'VERIFY_IDENTITY')
+          .map(t => t.payload.targetAddress?.toLowerCase())
+          .filter(Boolean)
+      );
+      const pending = Array.from(this.blockchain.voterRegistry.entries())
+        .filter(([addr, p]) => p.status === 'PENDING' && !addressesBeingVerified.has(addr.toLowerCase()))
+        .length;
       adminPendingEl.textContent = pending.toString();
     }
 

@@ -766,30 +766,54 @@ export class LoginRegister {
     // KYC status check across Blockchain Registry, Mempool, and Database Profile
     const profile = this.app.blockchain.voterRegistry.get(w.address.toLowerCase());
 
-    const pendingTx = this.app.blockchain.pendingTransactions.find(t => 
-      t.sender.toLowerCase() === w.address.toLowerCase() && 
+    const pendingKycTx = this.app.blockchain.pendingTransactions.find(t =>
+      t.sender.toLowerCase() === w.address.toLowerCase() &&
       (t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
+    );
+
+    // Check if there's a pending VERIFY_IDENTITY tx for this user (approval in flight)
+    const pendingVerifyTx = this.app.blockchain.pendingTransactions.find(t =>
+      t.type === 'VERIFY_IDENTITY' &&
+      t.payload.targetAddress?.toLowerCase() === w.address.toLowerCase()
     );
 
     let displayProfile: { name: string; email: string; nicPhoto: string; status: string; role: string; bio?: string } | null = null;
 
     if (profile) {
+      // Resolve nicPhoto: if blockchain has a compact reference, use session photo (from DB)
+      let resolvedPhoto = profile.nicPhoto;
+      if (!resolvedPhoto || resolvedPhoto.startsWith('kyc:db:')) {
+        resolvedPhoto = user.nicPhoto || 'https://via.placeholder.com/400x250?text=NIC+Photo';
+      }
+      // If approval is in-flight show status as VERIFYING to avoid confusion
+      const displayStatus = pendingVerifyTx && profile.status === 'PENDING'
+        ? 'VERIFYING'
+        : profile.status;
       displayProfile = {
         name: profile.name,
         email: profile.email,
-        nicPhoto: profile.nicPhoto,
-        status: profile.status,
+        nicPhoto: resolvedPhoto,
+        status: displayStatus,
         role: profile.role,
         bio: profile.bio
       };
-    } else if (pendingTx) {
+      // Sync session kycStatus with on-chain state
+      if (this.app.activeUser && profile.status !== this.app.activeUser.kycStatus) {
+        this.app.activeUser.kycStatus = profile.status;
+        localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
+      }
+    } else if (pendingKycTx) {
+      let resolvedPhoto = pendingKycTx.payload.nicPhoto;
+      if (!resolvedPhoto || resolvedPhoto.startsWith('kyc:db:')) {
+        resolvedPhoto = user.nicPhoto || 'https://via.placeholder.com/400x250?text=NIC+Photo';
+      }
       displayProfile = {
-        name: pendingTx.payload.name,
-        email: pendingTx.payload.email,
-        nicPhoto: pendingTx.payload.nicPhoto,
+        name: pendingKycTx.payload.name,
+        email: pendingKycTx.payload.email,
+        nicPhoto: resolvedPhoto,
         status: 'PENDING',
-        role: pendingTx.type === 'REGISTER_CANDIDATE_KYC' ? 'CANDIDATE' : 'VOTER',
-        bio: pendingTx.payload.bio
+        role: pendingKycTx.type === 'REGISTER_CANDIDATE_KYC' ? 'CANDIDATE' : 'VOTER',
+        bio: pendingKycTx.payload.bio
       };
     } else if (user.kycStatus && user.kycStatus !== 'UNSUBMITTED') {
       displayProfile = {
@@ -829,6 +853,8 @@ export class LoginRegister {
           badge.innerHTML = '<span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> Verified On-Chain</span>';
         } else if (displayProfile.status === 'REJECTED') {
           badge.innerHTML = '<span class="status-badge rejected"><i class="fa-solid fa-circle-xmark"></i> Application Rejected</span>';
+        } else if (displayProfile.status === 'VERIFYING') {
+          badge.innerHTML = '<span class="status-badge pending" style="color: var(--color-secondary);"><i class="fa-solid fa-shield-halved fa-spin"></i> Verification Mining...</span>';
         } else {
           badge.innerHTML = '<span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> Audit Pending</span>';
         }

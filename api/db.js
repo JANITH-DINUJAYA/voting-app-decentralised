@@ -6,14 +6,18 @@ if (!databaseUrl) {
   console.warn("WARNING: DATABASE_URL environment variable is missing. Connect Neon database in .env or Vercel dashboard.");
 }
 
-export const sql = neon(databaseUrl || "");
+export const sql = neon(databaseUrl || '');
+
+// Guard: only run initialization once per cold start (not on every API call)
+let _dbInitialized = false;
 
 /**
  * Automatically creates tables and seeds default user profiles if not present.
  */
 export async function initializeDatabase() {
+  if (_dbInitialized) return; // skip on warm invocations
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL variable is not configured. Please define it in your Vercel/local environment settings.");
+    throw new Error('DATABASE_URL variable is not configured. Please define it in your Vercel/local environment settings.');
   }
 
   // Create users schema table
@@ -166,4 +170,6 @@ export async function initializeDatabase() {
       )
     `;
   }
+
+  _dbInitialized = true;
 }

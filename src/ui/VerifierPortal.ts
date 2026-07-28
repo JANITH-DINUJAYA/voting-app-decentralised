@@ -61,11 +61,21 @@ export class VerifierPortal {
 
       // Sync verification status to Neon database
       try {
-        await fetch('/api/verify-kyc', {
+        const verifyRes = await fetch('/api/verify-kyc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ targetAddress, approved })
         });
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          // If the approved user is the currently logged-in user, update their local session
+          if (verifyData.user && this.app.activeUser?.walletAddress?.toLowerCase() === targetAddress.toLowerCase()) {
+            this.app.activeUser.kycStatus = verifyData.user.kycStatus;
+            localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
+          }
+        } else {
+          console.warn('verify-kyc API returned non-OK:', await verifyRes.text());
+        }
       } catch (err) {
         console.warn('Database verification sync failed:', err);
       }
