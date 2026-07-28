@@ -190,6 +190,13 @@ export class Router {
     if (navTamper) navTamper.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
     if (navDiagnostics) navDiagnostics.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
     if (navExplorer) navExplorer.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
+
+    // Show/hide Network Statistics widget in sidebar for Voters and Candidates
+    const statsWidget = document.querySelector('.stats-widget') as HTMLElement;
+    if (statsWidget) {
+      const shouldHide = isLoggedIn && (userRole === 'VOTER' || userRole === 'CANDIDATE');
+      statsWidget.style.display = shouldHide ? 'none' : 'block';
+    }
   }
 
   navigate(hash: string) {
