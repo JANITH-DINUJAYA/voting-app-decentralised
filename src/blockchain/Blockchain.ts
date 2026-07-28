@@ -227,6 +227,16 @@ export class Blockchain {
     }
 
     this.saveState();
+
+    // Auto-mine asynchronously in the background so the user never has to mine manually
+    setTimeout(async () => {
+      try {
+        console.log('Background auto-mining pending transactions...');
+        await this.minePendingTransactions(this.adminAddress);
+      } catch (err) {
+        console.error('Background auto-mining failed:', err);
+      }
+    }, 150);
   }
 
   /**

@@ -43,11 +43,10 @@ export class App {
 
   constructor() {
     this.blockchain = new Blockchain();
-    this.restoreSession();
     this.init();
   }
 
-  private restoreSession() {
+  private async restoreSession() {
     try {
       const stored = sessionStorage.getItem('votechain_session');
       if (!stored) return;
@@ -57,12 +56,8 @@ export class App {
 
       if (user && user.walletPrivateKey && user.walletPublicKey) {
         const w = new Wallet();
-        w.importFromHex(user.walletPrivateKey, user.walletPublicKey).then(() => {
-          this.wallet = w;
-          this.refreshAllViews();
-        }).catch(err => {
-          console.error('Failed to import wallet from session:', err);
-        });
+        await w.importFromHex(user.walletPrivateKey, user.walletPublicKey);
+        this.wallet = w;
       }
     } catch (e) {
       console.error('Failed to restore session:', e);
@@ -70,6 +65,9 @@ export class App {
   }
 
   private async init() {
+    // 0. Restore session first sequentially
+    await this.restoreSession();
+
     // 1. Initialize UI component controllers
     this.loginRegister = new LoginRegister(this);
     this.adminPanel = new AdminPanel(this);
@@ -116,6 +114,18 @@ export class App {
     // 7. Initial sync
     this.refreshAllViews();
     this.tamperConsole.init();
+
+    // Setup background database polling (every 5 seconds) to pull transactions/blocks
+    setInterval(async () => {
+      try {
+        if (this.explorer && !this.explorer.isMining) {
+          await this.blockchain.loadState();
+          this.refreshAllViews();
+        }
+      } catch (err) {
+        console.warn('Background Neon DB sync failed:', err);
+      }
+    }, 5000);
 
     this.showNotification('VoteChain Network active. Welcome to decentralized governance!', 'info');
   }
@@ -482,9 +492,8 @@ export class App {
       await tx.signTransaction(wallet);
       await this.blockchain.addTransaction(tx);
 
-      this.showNotification('Candidacy nomination application submitted successfully! Mine block to finalize.', 'success');
+      this.showNotification('Candidacy nomination application submitted successfully! It will be mined and processed automatically.', 'success');
       this.refreshAllViews();
-      this.router.navigate('#/explorer');
     } catch (e: any) {
       console.error(e);
       this.showNotification(`Application failed: ${e.message}`, 'error');

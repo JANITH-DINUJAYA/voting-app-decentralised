@@ -4,6 +4,7 @@ import { Block } from '../blockchain/Block';
 export class Explorer {
   private app: App;
   private selectedBlockIndex: number | null = null;
+  public isMining: boolean = false;
 
   // DOM Elements
   private mempoolBanner!: HTMLElement;
@@ -38,21 +39,21 @@ export class Explorer {
     this.mempoolCount = document.getElementById('mempool-tx-count')!;
     this.btnMineBlock = document.getElementById('btn-mine-block') as HTMLButtonElement;
     
-    this.blocksFlowContainer = document.getElementById('blocks-visual-flow')!;
+    this.blocksFlowContainer = document.getElementById('explorer-blocks-flow')!;
     
-    this.blockDetailContainer = document.getElementById('explorer-block-detail')!;
+    this.blockDetailContainer = document.getElementById('explorer-block-details')!;
     this.detailIndex = document.getElementById('detail-block-index')!;
-    this.detailBadge = document.getElementById('detail-block-badge')!;
+    this.detailBadge = document.getElementById('detail-block-status')!;
     this.detailHash = document.getElementById('detail-block-hash') as HTMLInputElement;
-    this.detailPrevHash = document.getElementById('detail-block-prev-hash') as HTMLInputElement;
+    this.detailPrevHash = document.getElementById('detail-block-prevhash') as HTMLInputElement;
     this.detailNonce = document.getElementById('detail-block-nonce')!;
     this.detailTime = document.getElementById('detail-block-time')!;
-    this.detailTxCount = document.getElementById('detail-block-tx-count')!;
-    this.detailTransactionsList = document.getElementById('detail-block-transactions')!;
+    this.detailTxCount = document.getElementById('detail-block-txcount')!;
+    this.detailTransactionsList = document.getElementById('detail-transactions-list')!;
     
-    this.miningModal = document.getElementById('mining-modal')!;
-    this.miningNonce = document.getElementById('mining-status-nonce')!;
-    this.miningHash = document.getElementById('mining-status-hash')!;
+    this.miningModal = document.getElementById('explorer-mining-modal')!;
+    this.miningNonce = document.getElementById('mining-current-nonce')!;
+    this.miningHash = document.getElementById('mining-current-hash')!;
   }
 
   private initEvents() {
@@ -67,6 +68,7 @@ export class Explorer {
     const miner = this.app.wallet ? this.app.wallet.address : '0x0000000000000000000000000000000000000000';
     
     try {
+      this.isMining = true;
       this.btnMineBlock.disabled = true;
       this.miningModal.classList.add('active');
       
@@ -94,6 +96,7 @@ export class Explorer {
       console.error(e);
       this.app.showNotification(`Mining failed: ${e.message}`, 'error');
     } finally {
+      this.isMining = false;
       this.miningModal.classList.remove('active');
       this.btnMineBlock.disabled = false;
     }
@@ -178,9 +181,11 @@ export class Explorer {
    * Render Block Explorer components
    */
   async render() {
-    // 1. Sync Mempool banner
+    // 1. Sync Mempool banner (Only show to Admin users)
     const pendingCount = this.app.blockchain.pendingTransactions.length;
-    if (pendingCount > 0) {
+    const isAdmin = this.app.activeUser?.role === 'ADMIN';
+
+    if (pendingCount > 0 && isAdmin) {
       this.mempoolCount.textContent = pendingCount.toString();
       this.mempoolBanner.style.display = 'flex';
     } else {

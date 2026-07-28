@@ -122,10 +122,6 @@ export class VoterTerminal {
       );
 
       this.app.refreshAllViews();
-      
-      // Auto redirect to Block Explorer to mine
-      this.app.router.navigate('#/explorer');
-
     } catch (e: any) {
       console.error(e);
       this.app.showNotification(`Voting rejected: ${e.message}`, 'error');

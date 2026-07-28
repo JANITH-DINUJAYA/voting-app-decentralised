@@ -62,17 +62,12 @@ export class VerifierPortal {
 
       this.app.showNotification(
         approved 
-          ? 'KYC verification approved! Transaction queued in mempool.' 
-          : 'KYC registration rejected! Transaction queued in mempool.',
+          ? 'KYC verification approved! It will be mined and processed automatically.' 
+          : 'KYC registration rejected! It will be mined and processed automatically.',
         approved ? 'success' : 'info'
       );
 
       this.app.refreshAllViews();
-
-      // Redirect to explorer to mine block
-      const explorerNav = document.querySelector('[href="#/explorer"]') as HTMLElement;
-      if (explorerNav) explorerNav.click();
-
     } catch (e: any) {
       console.error(e);
       this.app.showNotification(`Verification action failed: ${e.message}`, 'error');

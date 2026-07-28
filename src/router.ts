@@ -16,6 +16,9 @@ export class Router {
 
     window.addEventListener('hashchange', () => this.handleRouting());
     window.addEventListener('load', () => this.handleRouting());
+    
+    // Process initial route immediately on instantiation
+    this.handleRouting();
   }
 
   /**
@@ -62,6 +65,12 @@ export class Router {
 
       if (hash === '#/candidate' && userRole !== 'CANDIDATE') {
         this.app.showNotification('Access Denied: Candidate account required.', 'error');
+        this.redirectToRoleHome(userRole);
+        return;
+      }
+
+      if ((hash === '#/tamper' || hash === '#/diagnostics') && userRole !== 'ADMIN') {
+        this.app.showNotification('Access Denied: Administrative privileges required.', 'error');
         this.redirectToRoleHome(userRole);
         return;
       }
@@ -170,11 +179,15 @@ export class Router {
     const navCandidate = document.getElementById('nav-candidate');
     const navAdmin = document.getElementById('nav-admin');
     const navVerifier = document.getElementById('nav-verifier');
+    const navTamper = document.getElementById('nav-tamper');
+    const navDiagnostics = document.getElementById('nav-diagnostics');
 
     if (navVoter) navVoter.style.display = (isLoggedIn && userRole === 'VOTER') ? 'flex' : 'none';
     if (navCandidate) navCandidate.style.display = (isLoggedIn && userRole === 'CANDIDATE') ? 'flex' : 'none';
     if (navAdmin) navAdmin.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
     if (navVerifier) navVerifier.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
+    if (navTamper) navTamper.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
+    if (navDiagnostics) navDiagnostics.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
   }
 
   navigate(hash: string) {

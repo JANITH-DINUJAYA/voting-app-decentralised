@@ -116,10 +116,8 @@ export class AdminPanel {
       await this.app.blockchain.addTransaction(tx);
 
       this.resetForm();
-      this.app.showNotification('Election deployed! Mine block to finalize creation.', 'success');
+      this.app.showNotification('Election deployed! It will be mined and created automatically.', 'success');
       this.app.refreshAllViews();
-      this.app.router.navigate('#/explorer');
-
     } catch (e: any) {
       console.error(e);
       this.app.showNotification(`Deployment failed: ${e.message}`, 'error');
@@ -169,13 +167,12 @@ export class AdminPanel {
 
       this.app.showNotification(
         approved 
-          ? 'Candidacy application approved! Mine block to commit state.' 
-          : 'Candidacy application rejected! Mine block to commit state.', 
+          ? 'Candidacy application approved! It will be mined and processed automatically.' 
+          : 'Candidacy application rejected! It will be mined and processed automatically.', 
         'success'
       );
 
       this.app.refreshAllViews();
-      this.app.router.navigate('#/explorer');
     } catch (e: any) {
       console.error(e);
       this.app.showNotification(`Action failed: ${e.message}`, 'error');
@@ -211,9 +208,8 @@ export class AdminPanel {
       await tx.signTransaction(admin);
       await this.app.blockchain.addTransaction(tx);
 
-      this.app.showNotification('Election started! Mine block to open voting phase.', 'success');
+      this.app.showNotification('Election started! It will be mined and opened for voting automatically.', 'success');
       this.app.refreshAllViews();
-      this.app.router.navigate('#/explorer');
     } catch (e: any) {
       console.error(e);
       this.app.showNotification(`Failed to start election: ${e.message}`, 'error');

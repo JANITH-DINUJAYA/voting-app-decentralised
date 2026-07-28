@@ -337,6 +337,7 @@ export class LoginRegister {
         walletPrivateKey: keyHex,
         walletPublicKey: adminPubKeyHex
       };
+      sessionStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
       this.app.wallet = w;
 
       this.adminLoginKeyInput.value = '';
@@ -359,6 +360,7 @@ export class LoginRegister {
 
   private async authenticateSession(profile: UserProfile) {
     this.app.activeUser = profile;
+    sessionStorage.setItem('votechain_session', JSON.stringify(profile));
 
     // If wallet already exists in details, load it
     if (profile.walletPrivateKey && profile.walletPublicKey) {
@@ -413,6 +415,7 @@ export class LoginRegister {
     this.app.wallet = null;
     this.isEditing = false;
     this.clearFileSelection();
+    sessionStorage.removeItem('votechain_session');
     
     this.app.showNotification('Account signed out successfully.', 'info');
     this.app.refreshAllViews();
