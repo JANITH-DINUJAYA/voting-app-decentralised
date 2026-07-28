@@ -173,10 +173,29 @@ export class VoterTerminal {
       t.sender.toLowerCase() === wallet.address.toLowerCase() && 
       (t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
     );
+    // Check if a VERIFY_IDENTITY tx for this voter is in the mempool (approval in flight)
+    const pendingVerifyTx = this.app.blockchain.pendingTransactions.find(t =>
+      t.type === 'VERIFY_IDENTITY' &&
+      t.payload.targetAddress?.toLowerCase() === wallet.address.toLowerCase()
+    );
     const user = this.app.activeUser!;
 
     let currentStatus = 'UNSUBMITTED';
-    if (profile) currentStatus = profile.status;
+    if (profile) {
+      currentStatus = profile.status;
+      // If blockchain shows PENDING but the Neon DB session already shows VERIFIED,
+      // trust the DB (the VERIFY_IDENTITY block may not have been saved yet or is mining)
+      if (currentStatus === 'PENDING' && user.kycStatus === 'VERIFIED') {
+        currentStatus = 'VERIFIED';
+        // Sync the on-chain registry so it stays consistent
+        profile.status = 'VERIFIED';
+        this.app.blockchain.verifiedAddresses.add(wallet.address.toLowerCase());
+      }
+      // If approval is actively being mined right now, show a special state
+      if (currentStatus === 'PENDING' && pendingVerifyTx && pendingVerifyTx.payload.approved) {
+        currentStatus = 'VERIFYING';
+      }
+    }
     else if (pendingTx) currentStatus = 'PENDING';
     else if (user.kycStatus) currentStatus = user.kycStatus;
 
@@ -206,13 +225,14 @@ export class VoterTerminal {
       return;
     }
 
-    if (currentStatus === 'PENDING') {
+    if (currentStatus === 'PENDING' || currentStatus === 'VERIFYING') {
+      const isVerifying = currentStatus === 'VERIFYING';
       if (statusHeader) statusHeader.innerHTML = `
-        <div class="alert-box warning">
-          <i class="fa-solid fa-hourglass-half"></i>
+        <div class="alert-box ${isVerifying ? 'success' : 'warning'}">
+          <i class="fa-solid ${isVerifying ? 'fa-shield-halved fa-spin' : 'fa-hourglass-half'}"></i>
           <div>
-            <strong>Identity Verification Pending</strong>
-            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your KYC application is under review. You will be able to vote once the verifier approves your identity.</p>
+            <strong>${isVerifying ? 'Verification Mining In Progress...' : 'Identity Verification Pending'}</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">${isVerifying ? 'Your approval is being recorded on the blockchain. This takes a few seconds.' : 'Your KYC application is under review. You will be able to vote once the verifier approves your identity.'}</p>
           </div>
         </div>
       `;
@@ -220,14 +240,14 @@ export class VoterTerminal {
         kycGate.style.display = 'flex';
         kycGate.innerHTML = `
           <div style="text-align: center; padding: 2rem; width: 100%;">
-            <i class="fa-solid fa-hourglass-half" style="font-size: 2.5rem; color: var(--color-warning); display: block; margin-bottom: 0.75rem; animation: spin 3s linear infinite;"></i>
-            <h3 style="margin-bottom: 0.5rem;">Audit in Progress</h3>
-            <p style="color: var(--color-text-muted); font-size: 0.85rem;">Please wait while the verifier reviews your identity submission.</p>
+            <i class="fa-solid ${isVerifying ? 'fa-shield-halved' : 'fa-hourglass-half'}" style="font-size: 2.5rem; color: var(--color-${isVerifying ? 'secondary' : 'warning'}); display: block; margin-bottom: 0.75rem; animation: spin 3s linear infinite;"></i>
+            <h3 style="margin-bottom: 0.5rem;">${isVerifying ? 'Verification Mining...' : 'Audit in Progress'}</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem;">${isVerifying ? 'Your approval transaction is being committed to the blockchain.' : 'Please wait while the verifier reviews your identity submission.'}</p>
           </div>
         `;
       }
       if (votingSection) votingSection.style.display = 'none';
-      this.selectedTitle.textContent = 'Pending Verification';
+      this.selectedTitle.textContent = isVerifying ? 'Verifying...' : 'Pending Verification';
       return;
     }
 
