@@ -30,6 +30,9 @@ export class App {
   public activeUser: UserProfile | null = null;
   public selectedCampaignAddress: string = '';
 
+  // Timer Countdown Interval
+  private welcomeTimerInterval: any = null;
+
   // Routing
   public router!: Router;
 
@@ -134,6 +137,11 @@ export class App {
    * Triggered when a route/panel becomes active
    */
   triggerPanelOnOpen(hash: string) {
+    if (hash !== '#/' && hash !== '' && this.welcomeTimerInterval) {
+      clearInterval(this.welcomeTimerInterval);
+      this.welcomeTimerInterval = null;
+    }
+
     switch (hash) {
       case '#/':
         this.renderWelcomeHub();
@@ -565,6 +573,12 @@ export class App {
       welcomeChart.appendChild(group);
     });
 
+    // Clear old timer interval if any
+    if (this.welcomeTimerInterval) {
+      clearInterval(this.welcomeTimerInterval);
+      this.welcomeTimerInterval = null;
+    }
+
     // Countdown timer + winner
     const updateTime = () => {
       const remaining = contract.deadline - Date.now();
@@ -590,6 +604,10 @@ export class App {
           welcomeWinnerVotes.textContent = 'Election closed with zero ballots.';
         }
         welcomeWinnerCard.style.display = 'block';
+        if (this.welcomeTimerInterval) {
+          clearInterval(this.welcomeTimerInterval);
+          this.welcomeTimerInterval = null;
+        }
       } else {
         const h = Math.floor(remaining / 3600000);
         const m = Math.floor((remaining % 3600000) / 60000);
@@ -604,6 +622,7 @@ export class App {
     };
 
     updateTime();
+    this.welcomeTimerInterval = setInterval(updateTime, 1000);
     welcomeResults.style.display = 'grid';
   }
 

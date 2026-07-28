@@ -764,14 +764,87 @@ export class Blockchain {
         this.pendingTransactions = mempoolData.map((t: any) => new Transaction(t));
       }
 
-      // Verify integrity & self-heal local storage
+      // Verify integrity & self-heal database if corrupted
       const report = await this.checkLedgerValidity();
       if (!report.isValid) {
         console.warn('Ledger invalidity detected in database records: ', report.reason);
-      }
+        console.info('Purging invalid database ledger and restarting with fresh Genesis block...');
+        
+        try {
+          await fetch('/api/blocks', { method: 'DELETE' });
+          
+          // Re-initialize local memory
+          this.chain = [this.createGenesisBlock()];
+          this.pendingTransactions = [];
+          this.nonces.clear();
+          this.verifiedAddresses.clear();
+          this.voterRegistry.clear();
+          this.contracts.clear();
+          this.nonces.set('0x0000000000000000000000000000000000000000', 0);
+          
+          // Seed defaults
+          this.verifiedAddresses.add(this.adminAddress);
+          this.voterRegistry.set(this.adminAddress, {
+            name: 'System Admin',
+            email: 'admin@votechain.net',
+            nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
+            status: 'VERIFIED',
+            role: 'ADMIN'
+          });
+          
+          const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
+          this.verifiedAddresses.add(demoVoter);
+          this.voterRegistry.set(demoVoter, {
+            name: 'Demo Voter',
+            email: 'voter@votechain.net',
+            nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
+            status: 'VERIFIED',
+            role: 'VOTER'
+          });
 
-      // Save state to local cache for redundancy
-      this.saveState();
+          const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
+          this.verifiedAddresses.add(demoCandidate);
+          this.voterRegistry.set(demoCandidate, {
+            name: 'Demo Candidate',
+            email: 'candidate@votechain.net',
+            nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
+            status: 'VERIFIED',
+            role: 'CANDIDATE',
+            bio: 'Committed to absolute on-chain auditing and open data governance.'
+          });
+
+          // Post new genesis block to DB
+          const genesis = this.chain[0];
+          await fetch('/api/blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              index: genesis.index,
+              timestamp: genesis.timestamp,
+              transactions: genesis.transactions.map(t => ({
+                sender: t.sender,
+                recipient: t.recipient,
+                type: t.type,
+                payload: t.payload,
+                nonce: t.nonce,
+                timestamp: t.timestamp,
+                publicKey: t.publicKey,
+                signature: t.signature
+              })),
+              previousHash: genesis.previousHash,
+              hash: genesis.hash,
+              nonce: genesis.nonce
+            })
+          });
+          
+          this.saveState();
+        } catch (purgeErr) {
+          console.error('Failed to purge database ledger:', purgeErr);
+        }
+      } else {
+        // Save state to local cache for redundancy
+        this.saveState();
+      }
 
     } catch (e) {
       console.error('Failed to load blockchain state from Neon database:', e);
