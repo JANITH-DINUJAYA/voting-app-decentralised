@@ -147,6 +147,12 @@ export class App {
     // 8. Start the global 1-second real-time countdown tick loop
     this.startRealTimeCountdownTick();
 
+    // 9. Verify Secure Context (crypto.subtle is disabled on non-secure contexts like raw HTTP IPs)
+    if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
+      console.error('CRITICAL: Web Cryptography API is unavailable. Ensure you are accessing this application via HTTPS or localhost.');
+      this.showNotification('Cryptography Error: Secure context (HTTPS or localhost) required for on-chain audits.', 'error');
+    }
+
     this.showNotification('VoteChain Network active. Welcome to decentralized governance!', 'info');
   }
 
@@ -746,8 +752,14 @@ export class App {
     } else {
       badge.className = 'integrity-banner invalid';
       let reason = 'Ledger Altered';
-      if (!audit.isValid) reason = `Block #${audit.errorBlockIndex} Tampered!`;
-      else if (!consistency) reason = 'State Mismatch!';
+      if (!audit.isValid) {
+        console.error('Ledger verification failed:', audit.reason);
+        reason = `Block #${audit.errorBlockIndex} Tampered!`;
+      }
+      else if (!consistency) {
+        console.error('State consistency check failed.');
+        reason = 'State Mismatch!';
+      }
       badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${reason}</span>`;
     }
   }
