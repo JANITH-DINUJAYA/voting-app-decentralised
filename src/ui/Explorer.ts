@@ -51,9 +51,9 @@ export class Explorer {
     this.detailTxCount = document.getElementById('detail-block-txcount')!;
     this.detailTransactionsList = document.getElementById('detail-transactions-list')!;
     
-    this.miningModal = document.getElementById('explorer-mining-modal')!;
-    this.miningNonce = document.getElementById('mining-current-nonce')!;
-    this.miningHash = document.getElementById('mining-current-hash')!;
+    this.miningModal = document.getElementById('mining-modal')!;
+    this.miningNonce = document.getElementById('mining-status-nonce')!;
+    this.miningHash = document.getElementById('mining-status-hash')!;
   }
 
   private initEvents() {
