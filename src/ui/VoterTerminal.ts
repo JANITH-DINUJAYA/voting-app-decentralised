@@ -4,6 +4,7 @@ import type { TransactionType } from '../blockchain/Transaction';
 
 export class VoterTerminal {
   private app: App;
+  private localSelectedCandidate: string | null = null;
 
   // DOM Elements
   private campaignSelect!: HTMLSelectElement;
@@ -34,6 +35,7 @@ export class VoterTerminal {
 
   private initEvents() {
     this.campaignSelect.addEventListener('change', () => {
+      this.localSelectedCandidate = null;
       this.app.selectCampaign(this.campaignSelect.value);
     });
 
@@ -339,17 +341,32 @@ export class VoterTerminal {
       this.existingVoteBox.style.display = 'flex';
       if (this.existingVoteCandidate) this.existingVoteCandidate.textContent = currentVote.candidateName;
       if (this.btnSubmitVote && !isEnded) this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-signature"></i> Sign & Modify Vote';
+
+      // Self-heal: if the local selected candidate is now on-chain, clear the local buffer
+      if (currentVote.candidateName === this.localSelectedCandidate) {
+        this.localSelectedCandidate = null;
+      }
     } else if (this.existingVoteBox) {
       this.existingVoteBox.style.display = 'none';
       if (this.btnSubmitVote && !isEnded) this.btnSubmitVote.innerHTML = '<i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign & Cast Vote';
     }
+
+    // Defensive check: if local selected candidate is not valid in this campaign, reset it
+    if (this.localSelectedCandidate !== null && !contract.candidates.some(c => c.name === this.localSelectedCandidate)) {
+      this.localSelectedCandidate = null;
+    }
+
+    // Pre-selected state: local buffer holds unsign selection, fallback to on-chain vote
+    const selectedCandName = this.localSelectedCandidate !== null
+      ? this.localSelectedCandidate
+      : currentVote?.candidateName;
 
     // Build candidate cards
     const tallies = contract.getTallies();
     this.radioContainer.innerHTML = '';
     contract.candidates.forEach(cand => {
       const votes = tallies[cand.name] || 0;
-      const isSelected = currentVote?.candidateName === cand.name;
+      const isSelected = selectedCandName === cand.name;
       const initials = cand.name.split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase();
 
       const card = document.createElement('label');
@@ -367,6 +384,7 @@ export class VoterTerminal {
 
       const radio = card.querySelector('input[type="radio"]') as HTMLInputElement;
       radio.addEventListener('change', () => {
+        this.localSelectedCandidate = cand.name;
         this.radioContainer.querySelectorAll('.candidate-choice-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         this.updateTxPayload(cand.name);
