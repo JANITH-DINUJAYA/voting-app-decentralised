@@ -220,11 +220,15 @@ export class App {
       if (applyCard) applyCard.style.display = 'none';
       return;
     }
-
     const profile = this.blockchain.voterRegistry.get(this.wallet.address.toLowerCase());
-    const pendingTx = this.blockchain.pendingTransactions.find(t => 
-      t.sender.toLowerCase() === this.wallet!.address.toLowerCase() && 
+    const pendingTx = this.blockchain.pendingTransactions.find(t =>
+      t.sender.toLowerCase() === this.wallet!.address.toLowerCase() &&
       (t.type === 'REGISTER_VOTER_KYC' || t.type === 'REGISTER_CANDIDATE_KYC')
+    );
+    // Check if a VERIFY_IDENTITY tx for this candidate is in the mempool (approval in flight)
+    const pendingVerifyTx = this.blockchain.pendingTransactions.find(t =>
+      t.type === 'VERIFY_IDENTITY' &&
+      t.payload.targetAddress?.toLowerCase() === this.wallet!.address.toLowerCase()
     );
     const user = this.activeUser!;
 
@@ -233,6 +237,18 @@ export class App {
 
     if (profile) {
       currentStatus = profile.status;
+      // If blockchain shows PENDING but the Neon DB session already shows VERIFIED,
+      // trust the DB (the VERIFY_IDENTITY block may not have been saved yet or is mining)
+      if (currentStatus === 'PENDING' && user.kycStatus === 'VERIFIED') {
+        currentStatus = 'VERIFIED';
+        // Sync the on-chain registry so it stays consistent
+        profile.status = 'VERIFIED';
+        this.blockchain.verifiedAddresses.add(this.wallet.address.toLowerCase());
+      }
+      // If approval is actively being mined right now, show a special state
+      if (currentStatus === 'PENDING' && pendingVerifyTx && pendingVerifyTx.payload.approved) {
+        currentStatus = 'VERIFYING';
+      }
     } else if (pendingTx) {
       currentStatus = 'PENDING';
       displayProfile = { name: pendingTx.payload.name, email: pendingTx.payload.email };
@@ -267,25 +283,26 @@ export class App {
     }
 
     // Case 3: KYC pending
-    if (currentStatus === 'PENDING') {
+    if (currentStatus === 'PENDING' || currentStatus === 'VERIFYING') {
+      const isVerifying = currentStatus === 'VERIFYING';
       statusHeader.innerHTML = `
-        <div class="alert-box warning">
-          <i class="fa-solid fa-hourglass-half"></i>
+        <div class="alert-box ${isVerifying ? 'success' : 'warning'}">
+          <i class="fa-solid ${isVerifying ? 'fa-shield-halved fa-spin' : 'fa-hourglass-half'}"></i>
           <div>
-            <strong>Identity Verification Pending</strong>
-            <p style="margin-top: 0.25rem; font-size: 0.82rem;">Your KYC application has been submitted and is awaiting review by the system verifier. You will be able to participate in elections once approved.</p>
+            <strong>${isVerifying ? 'Verification Mining In Progress...' : 'Identity Verification Pending'}</strong>
+            <p style="margin-top: 0.25rem; font-size: 0.82rem;">${isVerifying ? 'Your approval is being recorded on the blockchain. This takes a few seconds.' : 'Your KYC application has been submitted and is awaiting review by the system verifier. You will be able to participate in elections once approved.'}</p>
           </div>
         </div>
       `;
       detailsCard.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
-          <i class="fa-solid fa-hourglass-half" style="font-size: 2.5rem; color: var(--color-warning); display: block; margin-bottom: 0.75rem; animation: spin 3s linear infinite;"></i>
-          <h3 style="margin-bottom: 0.5rem;">Audit In Progress</h3>
-          <p style="color: var(--color-text-muted); font-size: 0.85rem;">Your application is queued for review. This typically takes a few moments.</p>
+          <i class="fa-solid ${isVerifying ? 'fa-shield-halved' : 'fa-hourglass-half'}" style="font-size: 2.5rem; color: var(--color-${isVerifying ? 'secondary' : 'warning'}); display: block; margin-bottom: 0.75rem; animation: spin 3s linear infinite;"></i>
+          <h3 style="margin-bottom: 0.5rem;">${isVerifying ? 'Verification Mining...' : 'Audit In Progress'}</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem;">${isVerifying ? 'Your approval transaction is being committed to the blockchain.' : 'Your application is queued for review. This typically takes a few moments.'}</p>
           <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.35rem;">
             <div><strong>Name:</strong> ${displayProfile ? displayProfile.name : user.fullName}</div>
             <div><strong>Email:</strong> ${displayProfile ? displayProfile.email : user.email}</div>
-            <div><strong>Status:</strong> <span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> PENDING</span></div>
+            <div><strong>Status:</strong> <span class="status-badge pending"><i class="fa-solid fa-hourglass-half"></i> ${isVerifying ? 'VERIFYING' : 'PENDING'}</span></div>
           </div>
         </div>
       `;
@@ -333,7 +350,11 @@ export class App {
 
     const displayName = profile?.name || user.fullName || 'Candidate';
     const displayEmail = profile?.email || user.email || '';
-    const displayNic = profile?.nicPhoto || user.nicPhoto || 'https://via.placeholder.com/400x250';
+    // Resolve nicPhoto — prefer session URL (real ImgBB) if on-chain has a compact placeholder
+    let displayNic = profile?.nicPhoto || user.nicPhoto || 'https://via.placeholder.com/400x250';
+    if (!displayNic || displayNic.startsWith('kyc:db:')) {
+      displayNic = user.nicPhoto || 'https://via.placeholder.com/400x250?text=NIC+Photo';
+    }
     const displayBio = profile?.bio || user.bio || '';
 
     const initials = displayName.split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase();
