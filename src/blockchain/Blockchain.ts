@@ -172,8 +172,12 @@ export class Blockchain {
         throw new Error('Transaction Rejected: Candidate applications are closed.');
       }
       const profile = this.voterRegistry.get(transaction.sender.toLowerCase());
-      if (!profile || profile.status !== 'VERIFIED' || profile.role !== 'CANDIDATE') {
-        throw new Error('Transaction Rejected: Sender must be a verified candidate.');
+      // Accept both CANDIDATE role and verified addresses — VERIFY_IDENTITY may have restored role incorrectly
+      if (!profile || profile.status !== 'VERIFIED') {
+        throw new Error('Transaction Rejected: Sender identity is not verified on-chain.');
+      }
+      if (profile.role !== 'CANDIDATE') {
+        throw new Error('Transaction Rejected: Sender must be a verified candidate (not a voter).');
       }
     }
 
@@ -342,6 +346,10 @@ export class Blockchain {
         let profile = this.voterRegistry.get(targetAddress);
         if (profile) {
           profile.status = tx.payload.approved ? 'VERIFIED' : 'REJECTED';
+          // Also update role if payload carries a corrected role
+          if (tx.payload.targetRole) {
+            profile.role = tx.payload.targetRole;
+          }
           if (tx.payload.approved) {
             this.verifiedAddresses.add(targetAddress);
           }
@@ -352,7 +360,7 @@ export class Blockchain {
             email: tx.payload.targetEmail || 'member@votechain.net',
             nicPhoto: tx.payload.targetNicPhoto || 'https://via.placeholder.com/400x250',
             status: tx.payload.approved ? 'VERIFIED' : 'REJECTED',
-            role: tx.payload.targetRole || 'CANDIDATE',
+            role: tx.payload.targetRole || 'VOTER',
             bio: tx.payload.targetBio || ''
           });
           if (tx.payload.approved) {

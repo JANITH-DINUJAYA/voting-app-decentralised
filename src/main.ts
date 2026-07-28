@@ -427,8 +427,16 @@ export class App {
       return;
     }
 
-    const myAddress = this.wallet?.address.toLowerCase() || '';
-    const myProfile = this.blockchain.voterRegistry.get(myAddress);
+    // Use wallet address if available; fallback to activeUser walletAddress from DB session
+    const myAddress = (this.wallet?.address || this.activeUser?.walletAddress || '').toLowerCase();
+    const myProfile = myAddress ? this.blockchain.voterRegistry.get(myAddress) : null;
+
+    // Also check mempool for pending APPLY_CANDIDACY transactions from this address
+    const pendingApplicationContracts = new Set(
+      this.blockchain.pendingTransactions
+        .filter(t => t.type === 'APPLY_CANDIDACY' && t.sender.toLowerCase() === myAddress)
+        .map(t => t.recipient)
+    );
 
     elections.forEach(([address, contract]) => {
       const item = document.createElement('div');
@@ -439,16 +447,21 @@ export class App {
       item.style.flexDirection = 'column';
       item.style.gap = '0.5rem';
 
-      // Check if already applied
-      const application = contract.candidateApplicants.find(app => app.address === myAddress);
+      // Check if already applied (mined on-chain)
+      const application = myAddress ? contract.candidateApplicants.find(app => app.address.toLowerCase() === myAddress) : null;
+      // Check if pending in mempool
+      const isPending = pendingApplicationContracts.has(address);
 
       let actionHtml = '';
       if (application) {
         let badgeClass = 'pending';
         if (application.status === 'APPROVED') badgeClass = 'verified';
         if (application.status === 'REJECTED') badgeClass = 'rejected';
-
-        actionHtml = `<span class="status-badge ${badgeClass}" style="font-size: 0.72rem; font-weight: 700;">Application: ${application.status}</span>`;
+        actionHtml = `<span class="status-badge ${badgeClass}" style="font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-${application.status === 'APPROVED' ? 'circle-check' : application.status === 'REJECTED' ? 'circle-xmark' : 'clock'}"></i> Application: ${application.status}</span>`;
+      } else if (isPending) {
+        actionHtml = `<span class="status-badge pending" style="font-size: 0.72rem; font-weight: 700;"><i class="fa-solid fa-spinner fa-spin"></i> Application: PENDING (Mining...)</span>`;
+      } else if (!myAddress) {
+        actionHtml = `<span style="font-size: 0.78rem; color: var(--color-text-muted);">Connect wallet to apply</span>`;
       } else {
         actionHtml = `<button class="btn btn-secondary btn-sm btn-apply-to-election" data-election="${address}" style="font-size:0.75rem;"><i class="fa-solid fa-square-plus"></i> Submit Nomination</button>`;
       }
@@ -482,7 +495,7 @@ export class App {
 
     try {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Applying...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
       const wallet = this.wallet;
       const currentNonce = this.blockchain.getNonce(wallet.address);
@@ -491,10 +504,7 @@ export class App {
         sender: wallet.address,
         recipient: contractAddress,
         type: 'APPLY_CANDIDACY',
-        payload: {
-          name,
-          bio
-        },
+        payload: { name, bio },
         nonce: currentNonce,
         timestamp: Date.now(),
         publicKey: wallet.publicKeyHex
@@ -503,11 +513,17 @@ export class App {
       await tx.signTransaction(wallet);
       await this.blockchain.addTransaction(tx);
 
-      this.showNotification('Candidacy nomination application submitted successfully! It will be mined and processed automatically.', 'success');
+      this.showNotification('Nomination submitted! Mining in progress — status will update shortly.', 'success');
+      // Immediate UI refresh so the pending badge shows
       this.refreshAllViews();
     } catch (e: any) {
       console.error(e);
       this.showNotification(`Application failed: ${e.message}`, 'error');
+      // Re-enable button on error
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-square-plus"></i> Submit Nomination';
+      }
       this.refreshAllViews();
     }
   }
