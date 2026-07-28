@@ -339,9 +339,22 @@ export class Blockchain {
 
       case 'VERIFY_IDENTITY': {
         const targetAddress = tx.payload.targetAddress.toLowerCase();
-        const profile = this.voterRegistry.get(targetAddress);
+        let profile = this.voterRegistry.get(targetAddress);
         if (profile) {
           profile.status = tx.payload.approved ? 'VERIFIED' : 'REJECTED';
+          if (tx.payload.approved) {
+            this.verifiedAddresses.add(targetAddress);
+          }
+        } else {
+          // Reconstruct profile from transaction payload if missing on-chain
+          this.voterRegistry.set(targetAddress, {
+            name: tx.payload.targetName || 'Verified Member',
+            email: tx.payload.targetEmail || 'member@votechain.net',
+            nicPhoto: tx.payload.targetNicPhoto || 'https://via.placeholder.com/400x250',
+            status: tx.payload.approved ? 'VERIFIED' : 'REJECTED',
+            role: tx.payload.targetRole || 'CANDIDATE',
+            bio: tx.payload.targetBio || ''
+          });
           if (tx.payload.approved) {
             this.verifiedAddresses.add(targetAddress);
           }
@@ -656,6 +669,27 @@ export class Blockchain {
 
   public async loadState(): Promise<void> {
     try {
+      // 0. Quick height check to optimize performance (skip downloading large JSON if height hasn't changed)
+      try {
+        const heightRes = await fetch('/api/block-height');
+        if (heightRes.ok) {
+          const heightData = await heightRes.json();
+          const remoteHeight = heightData.height;
+          
+          if (remoteHeight === this.chain.length && this.chain.length > 1) {
+            // Reconstruct mempool only and return (very fast!)
+            const mempoolRes = await fetch('/api/mempool');
+            if (mempoolRes.ok) {
+              const mempoolData = await mempoolRes.json();
+              this.pendingTransactions = mempoolData.map((t: any) => new Transaction(t));
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Block height check failed, fetching full ledger:', err);
+      }
+
       // 1. Fetch blocks from Neon cloud database
       const blocksRes = await fetch('/api/blocks');
       if (!blocksRes.ok) {

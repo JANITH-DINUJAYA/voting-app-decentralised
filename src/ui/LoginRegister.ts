@@ -562,38 +562,16 @@ export class LoginRegister {
     try {
       this.btnSubmitReg.disabled = true;
 
-      // 1. Upload NIC to ImgBB if a new file is selected
+      // 1. Process image locally into Base64 format if a new file is selected
       if (this.selectedFile) {
-        this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading NIC to ImgBB...';
+        this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing NIC image...';
         this.progressBarContainer.style.display = 'block';
-        this.progressBarFill.style.width = '20%';
-        this.uploadStatusText.textContent = 'Uploading image...';
+        this.progressBarFill.style.width = '30%';
+        this.uploadStatusText.textContent = 'Processing image...';
 
-        const apiKey = import.meta.env.VITE_IMGBB_API_KEY || 'bbfda5a6eaea6c85b9c3125b4c8cc463';
-
-        const formData = new FormData();
-        formData.append('image', this.selectedFile);
-
-        this.progressBarFill.style.width = '50%';
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!res.ok) {
-          throw new Error(`ImgBB API responded with code: ${res.status}`);
-        }
-
-        this.progressBarFill.style.width = '80%';
-        const data = await res.json();
-        
-        if (data && data.data && data.data.url) {
-          this.uploadedImageUrl = data.data.url;
-          this.progressBarFill.style.width = '100%';
-          this.uploadStatusText.textContent = 'ImgBB upload successful!';
-        } else {
-          throw new Error('Image URL missing in ImgBB response.');
-        }
+        this.uploadedImageUrl = await this.readFileAsDataURL(this.selectedFile);
+        this.progressBarFill.style.width = '100%';
+        this.uploadStatusText.textContent = 'Image processed successfully!';
       }
 
       // 1.5 Save to Neon DB
@@ -828,5 +806,14 @@ export class LoginRegister {
         });
       }
     }
+  }
+
+  private readFileAsDataURL(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
   }
 }

@@ -27,13 +27,20 @@ export class VerifierPortal {
       const admin = this.app.wallet;
       const currentNonce = this.app.blockchain.getNonce(admin.address);
 
+      const appData = this.pendingApplications.find(a => a.address.toLowerCase() === targetAddress.toLowerCase());
+
       const tx = new Transaction({
         sender: admin.address,
         recipient: '0x0000000000000000000000000000000000000000',
         type: 'VERIFY_IDENTITY',
         payload: {
           targetAddress,
-          approved
+          approved,
+          targetName: appData ? appData.name : undefined,
+          targetEmail: appData ? appData.email : undefined,
+          targetNicPhoto: appData ? appData.nicPhoto : undefined,
+          targetRole: appData ? appData.role : undefined,
+          targetBio: appData ? appData.bio : undefined
         },
         nonce: currentNonce,
         timestamp: Date.now(),
