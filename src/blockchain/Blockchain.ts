@@ -469,6 +469,10 @@ export class Blockchain {
       // Verify block hash matches calculation
       const calculatedHash = await currentBlock.calculateHash();
       if (currentBlock.hash !== calculatedHash) {
+        console.error(`BLOCK #${i} HASH MISMATCH DEBUG INFO:`);
+        console.error(`- claims hash:      ${currentBlock.hash}`);
+        console.error(`- calculated hash:  ${calculatedHash}`);
+        console.error(`- browser serialization:`, JSON.stringify(currentBlock.getDataStringForHashing()));
         return {
           isValid: false,
           errorBlockIndex: i,

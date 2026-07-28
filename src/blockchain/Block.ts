@@ -17,9 +17,9 @@ export class Block {
   }
 
   /**
-   * Calculates the SHA-256 hash of the block's data
+   * Gets the serialized string representing the block's data for hashing
    */
-  async calculateHash(): Promise<string> {
+  getDataStringForHashing(): string {
     // Serialize transactions into a standardized format
     const txData = this.transactions.map(tx => ({
       sender: tx.sender,
@@ -32,13 +32,20 @@ export class Block {
       publicKey: tx.publicKey,
     }));
 
-    const dataString =
+    return (
       this.index.toString() +
       this.previousHash +
       this.timestamp.toString() +
       JSON.stringify(sortKeys(txData)) +
-      this.nonce.toString();
+      this.nonce.toString()
+    );
+  }
 
+  /**
+   * Calculates the SHA-256 hash of the block's data
+   */
+  async calculateHash(): Promise<string> {
+    const dataString = this.getDataStringForHashing();
     return await sha256(dataString);
   }
 
