@@ -22,6 +22,7 @@ export class Blockchain {
     bio?: string;
   }> = new Map();
   public onBlockMined?: () => void;
+  public onBlockMiningFailed?: (errorMsg: string) => void;
   private _isMining: boolean = false;
 
   constructor() {
@@ -242,8 +243,11 @@ export class Blockchain {
         try {
           console.log('Background auto-mining pending transactions...');
           await this.minePendingTransactions(this.adminAddress);
-        } catch (err) {
+        } catch (err: any) {
           console.error('Background auto-mining failed:', err);
+          if (this.onBlockMiningFailed) {
+            this.onBlockMiningFailed(err.message || String(err));
+          }
         } finally {
           this._isMining = false;
         }
@@ -279,7 +283,7 @@ export class Blockchain {
 
     // Post mined block to Neon DB
     try {
-      await fetch('/api/blocks', {
+      const res = await fetch('/api/blocks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -300,8 +304,15 @@ export class Blockchain {
           nonce: newBlock.nonce
         })
       });
-    } catch (e) {
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Database registration rejected: ${errText || res.status}`);
+      }
+    } catch (e: any) {
       console.error('Failed to post mined block to Neon:', e);
+      // Remove block from client if database save failed to avoid state desync
+      this.chain.pop();
+      throw e;
     }
     
     // Reward the miner (could be a simple record)
@@ -438,7 +449,7 @@ export class Blockchain {
       case 'START_ELECTION': {
         const contract = this.contracts.get(tx.recipient);
         if (contract) {
-          contract.startElection(tx.payload.durationMinutes, tx.sender);
+          contract.startElection(tx.payload.durationMinutes, tx.sender, tx.timestamp);
         }
         break;
       }
@@ -605,7 +616,7 @@ export class Blockchain {
             case 'START_ELECTION': {
               const contract = tempContracts.get(tx.recipient);
               if (contract) {
-                contract.startElection(tx.payload.durationMinutes, tx.sender);
+                contract.startElection(tx.payload.durationMinutes, tx.sender, tx.timestamp);
               }
               break;
             }

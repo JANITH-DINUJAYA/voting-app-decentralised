@@ -108,7 +108,7 @@ export class ElectionContract {
   /**
    * Starts the voting phase of the election (Admin only)
    */
-  startElection(durationMinutes: number, sender: string): void {
+  startElection(durationMinutes: number, sender: string, referenceTimestamp: number): void {
     if (sender.toLowerCase() !== this.creator.toLowerCase()) {
       throw new Error('Unauthorized: Only the election creator can start this election.');
     }
@@ -116,7 +116,7 @@ export class ElectionContract {
       throw new Error('Election is already active or ended.');
     }
     this.status = 'ACTIVE';
-    this.deadline = Date.now() + durationMinutes * 60 * 1000;
+    this.deadline = referenceTimestamp + durationMinutes * 60 * 1000;
   }
 
   /**

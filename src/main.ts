@@ -95,6 +95,10 @@ export class App {
       }
     };
 
+    this.blockchain.onBlockMiningFailed = (errorMsg: string) => {
+      this.showNotification(`Block mining / Neon DB sync failed: ${errorMsg}`, 'error');
+    };
+
     // 3. Welcome hub campaign selector
     const welcomeSelect = document.getElementById('select-campaign-welcome') as HTMLSelectElement;
     if (welcomeSelect) {
