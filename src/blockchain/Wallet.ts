@@ -1,4 +1,19 @@
 // Helper utilities for Hex translation
+export function sortKeys(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sortKeys);
+  }
+  const sortedKeys = Object.keys(obj).sort();
+  const result: any = {};
+  for (const key of sortedKeys) {
+    result[key] = sortKeys(obj[key]);
+  }
+  return result;
+}
+
 export function arrayBufferToHex(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let hex = '';

@@ -1,5 +1,5 @@
 import { Transaction } from './Transaction';
-import { sha256 } from './Wallet';
+import { sha256, sortKeys } from './Wallet';
 
 export class Block {
   public index: number;
@@ -25,7 +25,7 @@ export class Block {
       sender: tx.sender,
       recipient: tx.recipient,
       type: tx.type,
-      payload: tx.payload,
+      payload: sortKeys(tx.payload),
       nonce: tx.nonce,
       timestamp: tx.timestamp,
       signature: tx.signature,
@@ -36,7 +36,7 @@ export class Block {
       this.index.toString() +
       this.previousHash +
       this.timestamp.toString() +
-      JSON.stringify(txData) +
+      JSON.stringify(sortKeys(txData)) +
       this.nonce.toString();
 
     return await sha256(dataString);

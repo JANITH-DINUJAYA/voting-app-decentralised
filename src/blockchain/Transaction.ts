@@ -1,4 +1,4 @@
-import { Wallet, sha256 } from './Wallet';
+import { Wallet, sha256, sortKeys } from './Wallet';
 
 export type TransactionType = 
   | 'DEPLOY_ELECTION' 
@@ -55,7 +55,7 @@ export class Transaction {
       this.sender +
       this.recipient +
       this.type +
-      JSON.stringify(this.payload) +
+      JSON.stringify(sortKeys(this.payload)) +
       this.nonce.toString() +
       this.timestamp.toString() +
       this.publicKey
