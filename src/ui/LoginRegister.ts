@@ -408,6 +408,11 @@ export class LoginRegister {
     } else {
       window.location.hash = '#/voter';
     }
+
+    // Force immediate router evaluation regardless of whether hash changed
+    if (this.app.router) {
+      this.app.router.handleRouting();
+    }
   }
 
   private handleSignOut() {

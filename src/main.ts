@@ -79,12 +79,12 @@ export class App {
     this.tamperConsole = new TamperConsole(this);
     this.verifierPortal = new VerifierPortal(this);
 
-    // 1.5 Load decentralized ledger from Neon database
+    // 2. Initialize Hash Router (restores active panel UI instantly)
+    this.router = new Router(this);
+
+    // 2.5 Load decentralized ledger from Neon database in background
     this.showNotification('Synchronizing blockchain ledger with Neon cloud DB...', 'info');
     await this.blockchain.loadState();
-
-    // 2. Initialize Hash Router
-    this.router = new Router(this);
 
     // 3. Welcome hub campaign selector
     const welcomeSelect = document.getElementById('select-campaign-welcome') as HTMLSelectElement;
@@ -317,15 +317,18 @@ export class App {
       </div>
     `;
 
-    if (!profile) return;
+    const displayName = profile?.name || user.fullName || 'Candidate';
+    const displayEmail = profile?.email || user.email || '';
+    const displayNic = profile?.nicPhoto || user.nicPhoto || 'https://via.placeholder.com/400x250';
+    const displayBio = profile?.bio || user.bio || '';
 
-    const initials = profile.name.split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase();
+    const initials = displayName.split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase();
 
     detailsCard.innerHTML = `
       <div style="display: flex; align-items: center; gap: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
         <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; color: var(--bg-main); flex-shrink: 0;">${initials}</div>
         <div>
-          <h3 style="font-size: 1.15rem; font-weight: 700;">${profile.name}</h3>
+          <h3 style="font-size: 1.15rem; font-weight: 700;">${displayName}</h3>
           <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-secondary);">${this.wallet!.address}</span>
         </div>
         <div style="margin-left: auto;">
@@ -336,20 +339,20 @@ export class App {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.88rem;">
         <div class="form-group">
           <label>Email on Record</label>
-          <span>${profile.email}</span>
+          <span>${displayEmail}</span>
         </div>
         <div class="form-group">
           <label>NIC Document</label>
-          <a href="${profile.nicPhoto}" target="_blank" rel="noopener" style="color: var(--color-primary); font-weight: 600; font-size: 0.88rem; text-decoration: none;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> View NIC on ImgBB
+          <a href="${displayNic}" target="_blank" rel="noopener" style="color: var(--color-primary); font-weight: 600; font-size: 0.88rem; text-decoration: none;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> View NIC Document
           </a>
         </div>
       </div>
 
-      ${profile.bio ? `
+      ${displayBio ? `
         <div class="form-group">
           <label>Candidacy Manifesto</label>
-          <div style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 0.85rem 1rem; font-size: 0.88rem; line-height: 1.6; color: var(--color-text-main);">${profile.bio}</div>
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 0.85rem 1rem; font-size: 0.88rem; line-height: 1.6; color: var(--color-text-main);">${displayBio}</div>
         </div>
       ` : ''}
     `;
