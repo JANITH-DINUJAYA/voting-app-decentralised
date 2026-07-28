@@ -334,12 +334,42 @@ export class AdminPanel {
         const tallies = contract.getTallies();
         const totalVotes = Array.from(contract.votes.values()).length;
         const timeRemaining = contract.deadline - Date.now();
+        const isEnded = timeRemaining <= 0;
+
+        // Compute winner if ended
+        let winnerHtml = '';
+        if (isEnded) {
+          let winnerName = 'No votes cast';
+          let maxVotes = 0;
+          let tie = false;
+          Object.entries(tallies).forEach(([candName, votes]) => {
+            if (votes > maxVotes) {
+              maxVotes = votes;
+              winnerName = candName;
+              tie = false;
+            } else if (votes === maxVotes && maxVotes > 0) {
+              tie = true;
+            }
+          });
+          const winnerText = tie 
+            ? `Tie (${maxVotes} votes)` 
+            : maxVotes > 0 
+              ? `${winnerName} (${maxVotes} votes)` 
+              : 'No votes cast';
+
+          winnerHtml = `
+            <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(0, 245, 212, 0.05); border: 1px solid rgba(0, 245, 212, 0.2); font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; color: var(--color-secondary);">
+              <i class="fa-solid fa-trophy" style="color: var(--color-warning);"></i>
+              <span>Winner: <strong>${winnerText}</strong></span>
+            </div>
+          `;
+        }
 
         contentHtml = `
           <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.5rem; color: var(--color-text-muted);">
               <span>Voting Progress: <strong>${totalVotes} votes cast</strong></span>
-              <span>Time Left: <strong>${timeRemaining > 0 ? Math.round(timeRemaining / 60000) + ' min' : 'Ended'}</strong></span>
+              <span>Time Left: <strong class="admin-countdown" data-deadline="${contract.deadline}">${timeRemaining > 0 ? Math.round(timeRemaining / 60000) + ' min' : 'Ended'}</strong></span>
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.4rem;">
               ${contract.candidates.map(cand => {
@@ -353,15 +383,36 @@ export class AdminPanel {
                 `;
               }).join('')}
             </div>
+            ${winnerHtml}
           </div>
         `;
       } else {
         const tallies = contract.getTallies();
         const totalVotes = Array.from(contract.votes.values()).length;
+
+        // Compute winner
+        let winnerName = 'No votes cast';
+        let maxVotes = 0;
+        let tie = false;
+        Object.entries(tallies).forEach(([candName, votes]) => {
+          if (votes > maxVotes) {
+            maxVotes = votes;
+            winnerName = candName;
+            tie = false;
+          } else if (votes === maxVotes && maxVotes > 0) {
+            tie = true;
+          }
+        });
+        const winnerText = tie 
+          ? `Tie (${maxVotes} votes)` 
+          : maxVotes > 0 
+            ? `${winnerName} (${maxVotes} votes)` 
+            : 'No votes cast';
+
         contentHtml = `
           <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
             <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 0.4rem;">Election closed with <strong>${totalVotes} total votes</strong>.</p>
-            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem;">
               ${contract.candidates.map(cand => {
                 const votes = tallies[cand.name] || 0;
                 return `
@@ -371,6 +422,10 @@ export class AdminPanel {
                   </div>
                 `;
               }).join('')}
+            </div>
+            <div style="padding: 0.5rem 0.75rem; background: rgba(0, 245, 212, 0.05); border: 1px solid rgba(0, 245, 212, 0.2); font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; color: var(--color-secondary);">
+              <i class="fa-solid fa-trophy" style="color: var(--color-warning);"></i>
+              <span>Winner: <strong>${winnerText}</strong></span>
             </div>
           </div>
         `;

@@ -144,6 +144,9 @@ export class App {
       }
     }, 15000);
 
+    // 8. Start the global 1-second real-time countdown tick loop
+    this.startRealTimeCountdownTick();
+
     this.showNotification('VoteChain Network active. Welcome to decentralized governance!', 'info');
   }
 
@@ -865,6 +868,102 @@ export class App {
       notif.classList.remove('show');
       setTimeout(() => notif.remove(), 400);
     }, 4000);
+  }
+
+  private startRealTimeCountdownTick() {
+    setInterval(() => {
+      this.tickVoterCountdown();
+      this.tickAdminCountdowns();
+    }, 1000);
+  }
+
+  private formatTimeRemaining(ms: number): string {
+    if (ms <= 0) return '00:00:00';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+
+  private tickVoterCountdown() {
+    const card = document.getElementById('voter-countdown-card');
+    const display = document.getElementById('voter-countdown-display');
+    const winnerDisplay = document.getElementById('voter-winner-display');
+    const winnerNameEl = document.getElementById('voter-winner-name');
+
+    if (!card || !display || !winnerDisplay || !winnerNameEl) return;
+
+    const hash = window.location.hash || '#/';
+    if (hash !== '#/voter' || !this.selectedCampaignAddress) {
+      card.style.display = 'none';
+      return;
+    }
+
+    const contract = this.blockchain.contracts.get(this.selectedCampaignAddress);
+    if (!contract || contract.status === 'PRE_REGISTRATION') {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'flex';
+    const remaining = contract.deadline - Date.now();
+
+    if (remaining <= 0) {
+      display.textContent = '00:00:00';
+      display.style.color = 'var(--color-danger)';
+
+      // Calculate winner
+      const tallies = contract.getTallies();
+      let winnerName = 'No votes cast';
+      let maxVotes = 0;
+      let tie = false;
+      Object.entries(tallies).forEach(([candName, votes]) => {
+        if (votes > maxVotes) {
+          maxVotes = votes;
+          winnerName = candName;
+          tie = false;
+        } else if (votes === maxVotes && maxVotes > 0) {
+          tie = true;
+        }
+      });
+
+      const winnerText = tie 
+        ? `Tie (${maxVotes} votes)` 
+        : maxVotes > 0 
+          ? `${winnerName} (${maxVotes} votes)` 
+          : 'No votes cast';
+
+      winnerNameEl.textContent = winnerText;
+      winnerDisplay.style.display = 'flex';
+    } else {
+      display.textContent = this.formatTimeRemaining(remaining);
+      display.style.color = 'var(--color-primary)';
+      winnerDisplay.style.display = 'none';
+    }
+  }
+
+  private tickAdminCountdowns() {
+    const hash = window.location.hash || '#/';
+    if (hash !== '#/admin') return;
+
+    const elements = document.querySelectorAll('.admin-countdown');
+    elements.forEach(el => {
+      const htmlEl = el as HTMLElement;
+      const deadline = Number(htmlEl.getAttribute('data-deadline'));
+      if (isNaN(deadline)) return;
+
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        htmlEl.textContent = 'Ended';
+        htmlEl.style.color = 'var(--color-danger)';
+      } else {
+        htmlEl.textContent = this.formatTimeRemaining(remaining);
+        htmlEl.style.color = 'var(--color-primary)';
+      }
+    });
   }
 }
 

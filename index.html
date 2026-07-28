@@ -289,6 +289,18 @@
               </select>
             </div>
 
+            <!-- Voter countdown widget -->
+            <div class="card" id="voter-countdown-card" style="display: none; flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; border-color: rgba(157, 78, 221, 0.2); margin-bottom: 1rem; padding: 1rem;">
+              <div>
+                <strong style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Election Countdown</strong>
+                <div style="font-size: 1.4rem; font-weight: 800; font-family: var(--font-mono); color: var(--color-primary); margin-top: 0.25rem;" id="voter-countdown-display">00:00:00</div>
+              </div>
+              <div id="voter-winner-display" style="display: none; flex-direction: column; text-align: right; background: rgba(0, 245, 212, 0.05); padding: 0.4rem 0.8rem; border: 1px solid rgba(0, 245, 212, 0.15);">
+                <span style="font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;"><i class="fa-solid fa-trophy" style="color: var(--color-warning);"></i> Election Winner</span>
+                <strong id="voter-winner-name" style="font-size: 0.95rem; color: var(--color-secondary); margin-top: 0.1rem;">—</strong>
+              </div>
+            </div>
+
             <!-- Terminal Core -->
             <div class="card" id="voter-terminal-content">
               <div id="voter-kyc-gate" style="display: none;"></div>
