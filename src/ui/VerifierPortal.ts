@@ -29,10 +29,11 @@ export class VerifierPortal {
 
       const appData = this.pendingApplications.find(a => a.address.toLowerCase() === targetAddress.toLowerCase());
 
-      // Resolve the actual nicPhoto from DB if on-chain reference is a placeholder
+      // Resolve the actual nicPhoto — the DB returns the real ImgBB URL directly via fetchPendingKyc
+      // Only fall back to placeholder if it's still a legacy compact kyc:db: reference
       let resolvedNicPhoto = appData?.nicPhoto || '';
-      if (resolvedNicPhoto.startsWith('kyc:db:')) {
-        resolvedNicPhoto = this.app.activeUser?.nicPhoto || 'https://via.placeholder.com/400x250?text=NIC+Photo';
+      if (!resolvedNicPhoto || resolvedNicPhoto.startsWith('kyc:db:')) {
+        resolvedNicPhoto = 'https://via.placeholder.com/400x250?text=NIC+Photo+Not+Available';
       }
 
       const tx = new Transaction({
