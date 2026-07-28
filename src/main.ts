@@ -69,7 +69,7 @@ export class App {
     }
   }
 
-  private init() {
+  private async init() {
     // 1. Initialize UI component controllers
     this.loginRegister = new LoginRegister(this);
     this.adminPanel = new AdminPanel(this);
@@ -77,6 +77,10 @@ export class App {
     this.explorer = new Explorer(this);
     this.tamperConsole = new TamperConsole(this);
     this.verifierPortal = new VerifierPortal(this);
+
+    // 1.5 Load decentralized ledger from Neon database
+    this.showNotification('Synchronizing blockchain ledger with Neon cloud DB...', 'info');
+    await this.blockchain.loadState();
 
     // 2. Initialize Hash Router
     this.router = new Router(this);

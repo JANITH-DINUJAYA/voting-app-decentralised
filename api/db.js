@@ -35,6 +35,36 @@ export async function initializeDatabase() {
     );
   `;
 
+  // Create blocks schema table
+  await sql`
+    CREATE TABLE IF NOT EXISTS blocks (
+      id SERIAL PRIMARY KEY,
+      block_index INTEGER UNIQUE NOT NULL,
+      timestamp VARCHAR(50) NOT NULL,
+      transactions JSONB NOT NULL,
+      previous_hash VARCHAR(100) NOT NULL,
+      hash VARCHAR(100) NOT NULL,
+      nonce INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  // Create mempool schema table
+  await sql`
+    CREATE TABLE IF NOT EXISTS mempool (
+      id SERIAL PRIMARY KEY,
+      sender VARCHAR(100) NOT NULL,
+      recipient VARCHAR(100) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      payload JSONB NOT NULL,
+      nonce INTEGER NOT NULL,
+      timestamp BIGINT NOT NULL,
+      public_key TEXT NOT NULL,
+      signature TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
   // Schema migration check: Add columns if table existed previously without them
   const columnCheck = await sql`
     SELECT column_name 

@@ -205,6 +205,27 @@ export class Blockchain {
 
     // Add to pending transactions queue
     this.pendingTransactions.push(transaction);
+
+    // Broadcast to Neon Cloud mempool
+    try {
+      await fetch('/api/mempool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: transaction.sender,
+          recipient: transaction.recipient,
+          type: transaction.type,
+          payload: transaction.payload,
+          nonce: transaction.nonce,
+          timestamp: transaction.timestamp,
+          publicKey: transaction.publicKey,
+          signature: transaction.signature
+        })
+      });
+    } catch (e) {
+      console.error('Failed to broadcast transaction to Neon mempool:', e);
+    }
+
     this.saveState();
   }
 
@@ -233,6 +254,33 @@ export class Blockchain {
     
     // Clear mempool
     this.pendingTransactions = [];
+
+    // Post mined block to Neon DB
+    try {
+      await fetch('/api/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          index: newBlock.index,
+          timestamp: newBlock.timestamp,
+          transactions: newBlock.transactions.map(t => ({
+            sender: t.sender,
+            recipient: t.recipient,
+            type: t.type,
+            payload: t.payload,
+            nonce: t.nonce,
+            timestamp: t.timestamp,
+            publicKey: t.publicKey,
+            signature: t.signature
+          })),
+          previousHash: newBlock.previousHash,
+          hash: newBlock.hash,
+          nonce: newBlock.nonce
+        })
+      });
+    } catch (e) {
+      console.error('Failed to post mined block to Neon:', e);
+    }
     
     // Reward the miner (could be a simple record)
     console.log(`Block #${blockIndex} mined successfully by ${minerAddress}. Hash: ${newBlock.hash}`);
@@ -592,119 +640,161 @@ export class Blockchain {
       };
       localStorage.setItem('votechain_ledger', JSON.stringify(data));
     } catch (e) {
-      console.error('Failed to save blockchain state:', e);
+      console.error('Failed to save blockchain state locally:', e);
     }
   }
 
-  public loadState(): void {
+  public async loadState(): Promise<void> {
     try {
-      const stored = localStorage.getItem('votechain_ledger');
-      if (!stored) return;
+      // 1. Fetch blocks from Neon cloud database
+      const blocksRes = await fetch('/api/blocks');
+      if (!blocksRes.ok) {
+        throw new Error('Failed to fetch blockchain ledger from Neon cloud.');
+      }
+      const blocksData = await blocksRes.json();
 
-      const parsed = JSON.parse(stored);
-      if (!parsed) return;
+      // 2. Fetch mempool from Neon cloud mempool
+      const mempoolRes = await fetch('/api/mempool');
+      if (!mempoolRes.ok) {
+        throw new Error('Failed to fetch mempool from Neon cloud.');
+      }
+      const mempoolData = await mempoolRes.json();
 
-      // Reconstruct nonces
-      if (Array.isArray(parsed.nonces)) {
-        this.nonces = new Map(parsed.nonces);
-      }
-      // Reconstruct verifiedAddresses
-      if (Array.isArray(parsed.verifiedAddresses)) {
-        this.verifiedAddresses = new Set(parsed.verifiedAddresses);
-      }
-      // Reconstruct voterRegistry
-      if (Array.isArray(parsed.voterRegistry)) {
-        this.voterRegistry = new Map(parsed.voterRegistry);
-      }
-      // Reconstruct contracts
-      if (Array.isArray(parsed.contracts)) {
-        this.contracts = new Map(parsed.contracts.map((c: any) => {
-          const contract = new ElectionContract(
-            c.address,
-            c.creator,
-            c.title,
-            c.description,
-            c.candidates,
-            c.deadline,
-            c.isPrivate,
-            c.whitelist
-          );
-          contract.status = c.status || 'PRE_REGISTRATION';
-          contract.candidateApplicants = c.candidateApplicants || [];
-          if (Array.isArray(c.votes)) {
-            contract.votes = new Map(c.votes);
-          }
-          return [c.address, contract];
-        }));
-      }
+      // Reset state maps
+      this.nonces.clear();
+      this.verifiedAddresses.clear();
+      this.voterRegistry.clear();
+      this.contracts.clear();
+      this.nonces.set('0x0000000000000000000000000000000000000000', 0);
 
-      // Reconstruct chain
-      if (Array.isArray(parsed.chain)) {
-        this.chain = parsed.chain.map((blockData: any) => {
+      // Re-seed defaults
+      this.verifiedAddresses.add(this.adminAddress);
+      this.voterRegistry.set(this.adminAddress, {
+        name: 'System Admin',
+        email: 'admin@votechain.net',
+        nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
+        status: 'VERIFIED',
+        role: 'ADMIN'
+      });
+
+      const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
+      this.verifiedAddresses.add(demoVoter);
+      this.voterRegistry.set(demoVoter, {
+        name: 'Demo Voter',
+        email: 'voter@votechain.net',
+        nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
+        status: 'VERIFIED',
+        role: 'VOTER'
+      });
+
+      const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
+      this.verifiedAddresses.add(demoCandidate);
+      this.voterRegistry.set(demoCandidate, {
+        name: 'Demo Candidate',
+        email: 'candidate@votechain.net',
+        nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
+        status: 'VERIFIED',
+        role: 'CANDIDATE',
+        bio: 'Committed to absolute on-chain auditing and open data governance.'
+      });
+
+      // 3. Reconstruct chain from database blocks
+      let reconstructedChain: Block[] = [];
+
+      if (Array.isArray(blocksData) && blocksData.length > 0) {
+        reconstructedChain = blocksData.map((blockData: any) => {
           const txs = blockData.transactions.map((t: any) => new Transaction(t));
           const block = new Block(blockData.index, txs, blockData.previousHash);
-          block.timestamp = blockData.timestamp;
+          block.timestamp = parseInt(blockData.timestamp, 10) || blockData.timestamp;
           block.hash = blockData.hash;
           block.nonce = blockData.nonce;
           return block;
         });
+      } else {
+        // Initialize Genesis Block and POST to DB
+        const genesis = this.createGenesisBlock();
+        reconstructedChain = [genesis];
+        
+        await fetch('/api/blocks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            index: genesis.index,
+            timestamp: genesis.timestamp,
+            transactions: genesis.transactions.map(t => ({
+              sender: t.sender,
+              recipient: t.recipient,
+              type: t.type,
+              payload: t.payload,
+              nonce: t.nonce,
+              timestamp: t.timestamp,
+              publicKey: t.publicKey,
+              signature: t.signature
+            })),
+            previousHash: genesis.previousHash,
+            hash: genesis.hash,
+            nonce: genesis.nonce
+          })
+        });
       }
 
-      // Reconstruct pendingTransactions
-      if (Array.isArray(parsed.pendingTransactions)) {
-        this.pendingTransactions = parsed.pendingTransactions.map((t: any) => new Transaction(t));
-      }
-
-      // Self-heal logic: If loaded ledger fails validity checks due to key sorting migration, reset it
-      this.checkLedgerValidity().then(report => {
-        if (!report.isValid) {
-          console.warn('Legacy ledger cache invalid due to sorting updates. Resetting ledger cache...', report.reason);
-          localStorage.removeItem('votechain_ledger');
-          this.chain = [this.createGenesisBlock()];
-          this.pendingTransactions = [];
-          this.nonces.clear();
-          this.verifiedAddresses.clear();
-          this.voterRegistry.clear();
-          this.contracts.clear();
-          this.nonces.set('0x0000000000000000000000000000000000000000', 0);
-          
-          // Re-seed defaults
-          this.verifiedAddresses.add(this.adminAddress);
-          this.voterRegistry.set(this.adminAddress, {
-            name: 'System Admin',
-            email: 'admin@votechain.net',
-            nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
-            status: 'VERIFIED',
-            role: 'ADMIN'
-          });
-          
-          const demoVoter = '0x5a54ae7355004c6834bb619bc411a2c1bb71fb91';
-          this.verifiedAddresses.add(demoVoter);
-          this.voterRegistry.set(demoVoter, {
-            name: 'Demo Voter',
-            email: 'voter@votechain.net',
-            nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
-            status: 'VERIFIED',
-            role: 'VOTER'
-          });
-
-          const demoCandidate = '0x1fc1a0c3e8f4f0713ec2a921120765fca726cafb';
-          this.verifiedAddresses.add(demoCandidate);
-          this.voterRegistry.set(demoCandidate, {
-            name: 'Demo Candidate',
-            email: 'candidate@votechain.net',
-            nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
-            status: 'VERIFIED',
-            role: 'CANDIDATE',
-            bio: 'Committed to absolute on-chain auditing and open data governance.'
-          });
-          
-          this.saveState();
+      // Replay transitions to build Maps/Sets
+      for (const block of reconstructedChain) {
+        if (block.index > 0) {
+          for (const tx of block.transactions) {
+            await this.executeTransactionStateTransition(tx);
+          }
         }
-      });
+      }
+
+      this.chain = reconstructedChain;
+
+      // Reconstruct mempool
+      if (Array.isArray(mempoolData)) {
+        this.pendingTransactions = mempoolData.map((t: any) => new Transaction(t));
+      }
+
+      // Verify integrity & self-heal local storage
+      const report = await this.checkLedgerValidity();
+      if (!report.isValid) {
+        console.warn('Ledger invalidity detected in database records: ', report.reason);
+      }
+
+      // Save state to local cache for redundancy
+      this.saveState();
 
     } catch (e) {
-      console.error('Failed to load blockchain state:', e);
+      console.error('Failed to load blockchain state from Neon database:', e);
+      // Fallback to local storage if API is down
+      const stored = localStorage.getItem('votechain_ledger');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && Array.isArray(parsed.chain)) {
+            this.chain = parsed.chain.map((blockData: any) => {
+              const txs = blockData.transactions.map((t: any) => new Transaction(t));
+              const block = new Block(blockData.index, txs, blockData.previousHash);
+              block.timestamp = blockData.timestamp;
+              block.hash = blockData.hash;
+              block.nonce = blockData.nonce;
+              return block;
+            });
+            if (Array.isArray(parsed.pendingTransactions)) {
+              this.pendingTransactions = parsed.pendingTransactions.map((t: any) => new Transaction(t));
+            }
+            // Replay
+            for (const block of this.chain) {
+              if (block.index > 0) {
+                for (const tx of block.transactions) {
+                  await this.executeTransactionStateTransition(tx);
+                }
+              }
+            }
+          }
+        } catch (localErr) {
+          console.error('Failed to parse local fallback storage:', localErr);
+        }
+      }
     }
   }
 }
