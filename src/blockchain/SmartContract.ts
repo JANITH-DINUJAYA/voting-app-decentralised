@@ -43,7 +43,10 @@ export class ElectionContract {
     this.creator = creator;
     this.title = title;
     this.description = description;
-    this.candidates = candidates || [];
+    // Clone candidates array to prevent mutation of the original transaction payload reference
+    this.candidates = Array.isArray(candidates)
+      ? candidates.map(c => ({ name: c.name, bio: c.bio, avatarUrl: c.avatarUrl }))
+      : [];
     this.deadline = deadline;
     this.isPrivate = isPrivate;
     
