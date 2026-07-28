@@ -131,7 +131,7 @@ export class App {
     this.refreshAllViews();
     this.tamperConsole.init();
 
-    // Setup background database polling (every 5 seconds) to pull new blocks/transactions
+    // Setup background database polling (every 15 seconds) to pull new blocks/transactions
     setInterval(async () => {
       try {
         // Skip sync if currently mining (avoid conflicts)
@@ -142,7 +142,7 @@ export class App {
       } catch (err) {
         console.warn('Background Neon DB sync failed:', err);
       }
-    }, 5000);
+    }, 15000);
 
     this.showNotification('VoteChain Network active. Welcome to decentralized governance!', 'info');
   }
