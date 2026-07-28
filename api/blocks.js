@@ -57,16 +57,5 @@ export default async function handler(req, res) {
     }
   }
 
-  if (req.method === 'DELETE') {
-    try {
-      await sql`TRUNCATE TABLE blocks CASCADE`;
-      await sql`TRUNCATE TABLE mempool CASCADE`;
-      return res.status(200).json({ message: 'Blockchain ledger and transaction mempool purged successfully.' });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: `Failed to purge blockchain: ${err.message}` });
-    }
-  }
-
   return res.status(455).json({ error: 'Method Not Allowed' });
 }
