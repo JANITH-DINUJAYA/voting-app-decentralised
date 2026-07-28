@@ -25,10 +25,11 @@ export interface UserProfile {
 }
 
 export class App {
-  public blockchain: Blockchain;
+  public blockchain!: Blockchain;
   public wallet: Wallet | null = null;
   public activeUser: UserProfile | null = null;
   public selectedCampaignAddress: string = '';
+  public productionMode: boolean = false;
 
   // Timer Countdown Interval
   private welcomeTimerInterval: any = null;
@@ -45,7 +46,6 @@ export class App {
   private verifierPortal!: VerifierPortal;
 
   constructor() {
-    this.blockchain = new Blockchain();
     this.init();
   }
 
@@ -68,7 +68,21 @@ export class App {
   }
 
   private async init() {
-    // 0. Restore session first sequentially
+    // 0. Load production/sandbox configuration from API backend
+    try {
+      const configRes = await fetch('/api/config');
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        this.productionMode = configData.productionMode === true;
+      }
+    } catch (err) {
+      console.warn('Failed to load system config, defaulting to sandbox:', err);
+    }
+
+    // 0.5 Initialize Blockchain
+    this.blockchain = new Blockchain(this.productionMode);
+
+    // 0.6 Restore session first sequentially
     await this.restoreSession();
 
     // 1. Initialize UI component controllers

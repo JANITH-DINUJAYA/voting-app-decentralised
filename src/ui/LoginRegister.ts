@@ -151,6 +151,14 @@ export class LoginRegister {
     this.pubkeyHexArea = document.getElementById('login-pubkey-hex') as HTMLTextAreaElement;
     this.privkeyHexArea = document.getElementById('login-privkey-hex') as HTMLTextAreaElement;
     this.btnDisconnect = document.getElementById('btn-login-disconnect') as HTMLButtonElement;
+
+    // Hide demo shortcuts in production mode
+    if (this.app.productionMode) {
+      const demoContainer = document.getElementById('demo-key-container');
+      if (demoContainer) {
+        demoContainer.style.display = 'none';
+      }
+    }
   }
 
   private initEvents() {

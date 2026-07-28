@@ -25,42 +25,47 @@ export class Blockchain {
   public onBlockMiningFailed?: (errorMsg: string) => void;
   private _isMining: boolean = false;
 
-  constructor() {
+  constructor(productionMode: boolean = false) {
     this.chain = [this.createGenesisBlock()];
     this.nonces.set('0x0000000000000000000000000000000000000000', 0);
 
-    // Pre-seed Admin Verifier
-    this.verifiedAddresses.add(this.adminAddress);
-    this.voterRegistry.set(this.adminAddress, {
-      name: 'System Admin',
-      email: 'admin@votechain.net',
-      nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
-      status: 'VERIFIED',
-      role: 'ADMIN'
-    });
+    if (!productionMode) {
+      console.log('Blockchain initialized in Demo/Sandbox mode. Adding pre-seeded profiles...');
+      // Pre-seed Admin Verifier
+      this.verifiedAddresses.add(this.adminAddress);
+      this.voterRegistry.set(this.adminAddress, {
+        name: 'System Admin',
+        email: 'admin@votechain.net',
+        nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
+        status: 'VERIFIED',
+        role: 'ADMIN'
+      });
 
-    // Pre-seed Demo Voter
-    const demoVoter = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3';
-    this.verifiedAddresses.add(demoVoter);
-    this.voterRegistry.set(demoVoter, {
-      name: 'Demo Voter',
-      email: 'voter@votechain.net',
-      nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
-      status: 'VERIFIED',
-      role: 'VOTER'
-    });
+      // Pre-seed Demo Voter
+      const demoVoter = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3';
+      this.verifiedAddresses.add(demoVoter);
+      this.voterRegistry.set(demoVoter, {
+        name: 'Demo Voter',
+        email: 'voter@votechain.net',
+        nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
+        status: 'VERIFIED',
+        role: 'VOTER'
+      });
 
-    // Pre-seed Demo Candidate
-    const demoCandidate = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d';
-    this.verifiedAddresses.add(demoCandidate);
-    this.voterRegistry.set(demoCandidate, {
-      name: 'Demo Candidate',
-      email: 'candidate@votechain.net',
-      nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
-      status: 'VERIFIED',
-      role: 'CANDIDATE',
-      bio: 'Committed to absolute on-chain auditing and open data governance.'
-    });
+      // Pre-seed Demo Candidate
+      const demoCandidate = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d';
+      this.verifiedAddresses.add(demoCandidate);
+      this.voterRegistry.set(demoCandidate, {
+        name: 'Demo Candidate',
+        email: 'candidate@votechain.net',
+        nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
+        status: 'VERIFIED',
+        role: 'CANDIDATE',
+        bio: 'Committed to absolute on-chain auditing and open data governance.'
+      });
+    } else {
+      console.log('Blockchain initialized in Clean Production Mode.');
+    }
 
     // Load persisted state from localStorage
     this.loadState();
