@@ -21,6 +21,8 @@ export class Blockchain {
     role: 'VOTER' | 'CANDIDATE' | 'ADMIN';
     bio?: string;
   }> = new Map();
+  public onBlockMined?: () => void;
+  private _isMining: boolean = false;
 
   constructor() {
     this.chain = [this.createGenesisBlock()];
@@ -233,14 +235,20 @@ export class Blockchain {
     this.saveState();
 
     // Auto-mine asynchronously in the background so the user never has to mine manually
-    setTimeout(async () => {
-      try {
-        console.log('Background auto-mining pending transactions...');
-        await this.minePendingTransactions(this.adminAddress);
-      } catch (err) {
-        console.error('Background auto-mining failed:', err);
-      }
-    }, 150);
+    if (!this._isMining) {
+      setTimeout(async () => {
+        if (this._isMining) return; // double-guard against concurrent mining
+        this._isMining = true;
+        try {
+          console.log('Background auto-mining pending transactions...');
+          await this.minePendingTransactions(this.adminAddress);
+        } catch (err) {
+          console.error('Background auto-mining failed:', err);
+        } finally {
+          this._isMining = false;
+        }
+      }, 150);
+    }
   }
 
   /**
@@ -300,6 +308,11 @@ export class Blockchain {
     console.log(`Block #${blockIndex} mined successfully by ${minerAddress}. Hash: ${newBlock.hash}`);
     
     this.saveState();
+
+    if (this.onBlockMined) {
+      this.onBlockMined();
+    }
+
     return newBlock;
   }
 
@@ -757,7 +770,7 @@ export class Blockchain {
         reconstructedChain = blocksData.map((blockData: any) => {
           const txs = blockData.transactions.map((t: any) => new Transaction(t));
           const block = new Block(blockData.index, txs, blockData.previousHash);
-          block.timestamp = parseInt(blockData.timestamp, 10) || blockData.timestamp;
+          block.timestamp = Number(blockData.timestamp);
           block.hash = blockData.hash;
           block.nonce = blockData.nonce;
           return block;
@@ -806,87 +819,15 @@ export class Blockchain {
         this.pendingTransactions = mempoolData.map((t: any) => new Transaction(t));
       }
 
-      // Verify integrity & self-heal database if corrupted
+      // Verify integrity — only LOG, never auto-purge (purge causes total data loss on hash mismatch)
       const report = await this.checkLedgerValidity();
       if (!report.isValid) {
-        console.warn('Ledger invalidity detected in database records: ', report.reason);
-        console.info('Purging invalid database ledger and restarting with fresh Genesis block...');
-        
-        try {
-          await fetch('/api/blocks', { method: 'DELETE' });
-          
-          // Re-initialize local memory
-          this.chain = [this.createGenesisBlock()];
-          this.pendingTransactions = [];
-          this.nonces.clear();
-          this.verifiedAddresses.clear();
-          this.voterRegistry.clear();
-          this.contracts.clear();
-          this.nonces.set('0x0000000000000000000000000000000000000000', 0);
-          
-          // Seed defaults
-          this.verifiedAddresses.add(this.adminAddress);
-          this.voterRegistry.set(this.adminAddress, {
-            name: 'System Admin',
-            email: 'admin@votechain.net',
-            nicPhoto: 'https://i.ibb.co/3p03G4q/admin-avatar.png',
-            status: 'VERIFIED',
-            role: 'ADMIN'
-          });
-          
-          const demoVoter = '0x4d2ef1a879f3f92276f2dc039d805d329b62f7f3';
-          this.verifiedAddresses.add(demoVoter);
-          this.voterRegistry.set(demoVoter, {
-            name: 'Demo Voter',
-            email: 'voter@votechain.net',
-            nicPhoto: 'https://i.ibb.co/ZKgHq6F/voter-card.png',
-            status: 'VERIFIED',
-            role: 'VOTER'
-          });
-
-          const demoCandidate = '0x88206e119689b5ba9bf4f650e13b7680d448ad4d';
-          this.verifiedAddresses.add(demoCandidate);
-          this.voterRegistry.set(demoCandidate, {
-            name: 'Demo Candidate',
-            email: 'candidate@votechain.net',
-            nicPhoto: 'https://i.ibb.co/f464JcT/candidate-card.png',
-            status: 'VERIFIED',
-            role: 'CANDIDATE',
-            bio: 'Committed to absolute on-chain auditing and open data governance.'
-          });
-
-          // Post new genesis block to DB
-          const genesis = this.chain[0];
-          await fetch('/api/blocks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              index: genesis.index,
-              timestamp: genesis.timestamp,
-              transactions: genesis.transactions.map(t => ({
-                sender: t.sender,
-                recipient: t.recipient,
-                type: t.type,
-                payload: t.payload,
-                nonce: t.nonce,
-                timestamp: t.timestamp,
-                publicKey: t.publicKey,
-                signature: t.signature
-              })),
-              previousHash: genesis.previousHash,
-              hash: genesis.hash,
-              nonce: genesis.nonce
-            })
-          });
-          
-          this.saveState();
-        } catch (purgeErr) {
-          console.error('Failed to purge database ledger:', purgeErr);
-        }
-      } else {
-        // Save state to local cache for redundancy
-        this.saveState();
+        console.warn('Ledger integrity check WARNING:', report.reason);
+        console.warn('Continuing with current ledger state. Use the Tamper Console to investigate.');
       }
+
+      // Save local cache
+      this.saveState();
 
     } catch (e) {
       console.error('Failed to load blockchain state from Neon database:', e);
@@ -899,7 +840,7 @@ export class Blockchain {
             this.chain = parsed.chain.map((blockData: any) => {
               const txs = blockData.transactions.map((t: any) => new Transaction(t));
               const block = new Block(blockData.index, txs, blockData.previousHash);
-              block.timestamp = blockData.timestamp;
+              block.timestamp = Number(blockData.timestamp);
               block.hash = blockData.hash;
               block.nonce = blockData.nonce;
               return block;

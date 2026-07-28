@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         kyc_status as "kycStatus",
         bio
       FROM users 
-      WHERE kyc_status = 'PENDING'
+      WHERE kyc_status = 'PENDING' AND wallet_address IS NOT NULL
       ORDER BY id DESC
     `;
 

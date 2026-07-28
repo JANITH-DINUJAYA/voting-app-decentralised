@@ -29,6 +29,12 @@ export class VerifierPortal {
 
       const appData = this.pendingApplications.find(a => a.address.toLowerCase() === targetAddress.toLowerCase());
 
+      // Resolve the actual nicPhoto from DB if on-chain reference is a placeholder
+      let resolvedNicPhoto = appData?.nicPhoto || '';
+      if (resolvedNicPhoto.startsWith('kyc:db:')) {
+        resolvedNicPhoto = this.app.activeUser?.nicPhoto || 'https://via.placeholder.com/400x250?text=NIC+Photo';
+      }
+
       const tx = new Transaction({
         sender: admin.address,
         recipient: '0x0000000000000000000000000000000000000000',
@@ -38,7 +44,7 @@ export class VerifierPortal {
           approved,
           targetName: appData ? appData.name : undefined,
           targetEmail: appData ? appData.email : undefined,
-          targetNicPhoto: appData ? appData.nicPhoto : undefined,
+          targetNicPhoto: resolvedNicPhoto || undefined,
           targetRole: appData ? appData.role : undefined,
           targetBio: appData ? appData.bio : undefined
         },
@@ -58,19 +64,22 @@ export class VerifierPortal {
         await fetch('/api/verify-kyc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetAddress,
-            approved
-          })
+          body: JSON.stringify({ targetAddress, approved })
         });
       } catch (err) {
         console.warn('Database verification sync failed:', err);
       }
 
+      // Optimistically remove from pending list immediately (don't wait for mining)
+      this.pendingApplications = this.pendingApplications.filter(
+        a => a.address.toLowerCase() !== targetAddress.toLowerCase()
+      );
+      this.render();
+
       this.app.showNotification(
         approved 
-          ? 'KYC verification approved! It will be mined and processed automatically.' 
-          : 'KYC registration rejected! It will be mined and processed automatically.',
+          ? `KYC Approved! Identity verified for ${appData?.name || targetAddress.substring(0, 12)}. Mining in progress...` 
+          : `KYC Rejected. Application from ${appData?.name || targetAddress.substring(0, 12)} has been rejected.`,
         approved ? 'success' : 'info'
       );
 
@@ -139,12 +148,30 @@ export class VerifierPortal {
       console.warn('Database fetch failed, relying on ledger:', err);
     }
 
-    // Merge and deduplicate by address
-    const merged = [...localPending, ...blockchainPending, ...dbPending];
+    // Build set of addresses already VERIFIED or REJECTED on-chain
+    const alreadyProcessed = new Set<string>();
+    this.app.blockchain.voterRegistry.forEach((profile, address) => {
+      if (profile.status === 'VERIFIED' || profile.status === 'REJECTED') {
+        alreadyProcessed.add(address.toLowerCase());
+      }
+    });
+
+    // Check for pending VERIFY_IDENTITY transactions in the mempool (being mined right now)
+    const pendingVerifications = new Set(
+      this.app.blockchain.pendingTransactions
+        .filter(t => t.type === 'VERIFY_IDENTITY')
+        .map(t => t.payload.targetAddress.toLowerCase())
+    );
+
+    // Merge: DB data first (has real nicPhoto URLs), then blockchain, then mempool
+    // Deduplication keeps the first occurrence, so DB data wins
+    const merged = [...dbPending, ...blockchainPending, ...localPending];
     const seen = new Set<string>();
     this.pendingApplications = merged.filter(app => {
       if (!app.address) return false;
       const addr = app.address.toLowerCase();
+      if (alreadyProcessed.has(addr)) return false;     // Already verified/rejected on-chain
+      if (pendingVerifications.has(addr)) return false;  // Being mined right now
       if (seen.has(addr)) return false;
       seen.add(addr);
       return true;
@@ -204,11 +231,15 @@ export class VerifierPortal {
           <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <strong>National Identity Card (NIC)</strong>
+              ${!app.nicPhoto.startsWith('kyc:db:') ? `
               <a href="${app.nicPhoto}" target="_blank" rel="noopener" style="color: var(--color-primary); font-size: 0.75rem; font-weight: 600; text-decoration: none;">
                 <i class="fa-solid fa-up-right-from-square"></i> View Original
-              </a>
+              </a>` : ''}
             </div>
-            <img src="${app.nicPhoto}" class="kyc-app-nic-preview" alt="NIC Photo Preview" onerror="this.src='https://via.placeholder.com/400x250?text=NIC+Photo+Unavailable'" />
+            ${app.nicPhoto.startsWith('kyc:db:')
+              ? `<div style="padding: 1rem; background: var(--bg-main); border: 1px solid var(--border-color); text-align: center; color: var(--color-text-muted); font-size: 0.82rem;"><i class="fa-solid fa-image" style="font-size: 2rem; color: var(--color-primary); display: block; margin-bottom: 0.5rem;"></i>NIC photo stored securely in Neon database. Identity documentation was submitted and is available for review.</div>`
+              : `<img src="${app.nicPhoto}" class="kyc-app-nic-preview" alt="NIC Photo Preview" onerror="this.src='https://via.placeholder.com/400x250?text=NIC+Photo+Unavailable'" />`
+            }
           </div>
 
           <div class="kyc-app-actions">

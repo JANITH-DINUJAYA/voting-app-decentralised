@@ -652,10 +652,16 @@ export class LoginRegister {
       const currentNonce = this.app.blockchain.getNonce(w.address);
       const isCandidate = role === 'CANDIDATE';
       
+      // Store only a short reference on-chain, not the full photo (prevents huge payloads that break block hashes)
+      // The actual photo is safely stored in Neon DB via /api/update-kyc above
+      const nicPhotoRef = this.uploadedImageUrl.startsWith('data:')
+        ? `kyc:db:${w.address.substring(0, 16)}` // Compact placeholder for base64 images
+        : this.uploadedImageUrl; // Use actual Cloudinary URL if available
+      
       const payload: any = {
         name,
         email,
-        nicPhoto: this.uploadedImageUrl
+        nicPhoto: nicPhotoRef
       };
       
       if (isCandidate) {

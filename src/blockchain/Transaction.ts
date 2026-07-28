@@ -40,7 +40,7 @@ export class Transaction {
     this.type = data.type;
     this.payload = data.payload;
     this.nonce = data.nonce;
-    this.timestamp = data.timestamp || Date.now();
+    this.timestamp = Number(data.timestamp) || Date.now();
     this.publicKey = data.publicKey;
     if (data.signature) {
       this.signature = data.signature;

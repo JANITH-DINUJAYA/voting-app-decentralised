@@ -86,6 +86,15 @@ export class App {
     this.showNotification('Synchronizing blockchain ledger with Neon cloud DB...', 'info');
     await this.blockchain.loadState();
 
+    // Wire up auto-refresh when a block is mined in the background
+    this.blockchain.onBlockMined = () => {
+      console.log('Block mined — auto-refreshing all views...');
+      this.refreshAllViews();
+      if (window.location.hash === '#/verifier') {
+        this.verifierPortal.fetchPendingKyc();
+      }
+    };
+
     // 3. Welcome hub campaign selector
     const welcomeSelect = document.getElementById('select-campaign-welcome') as HTMLSelectElement;
     if (welcomeSelect) {
@@ -118,13 +127,14 @@ export class App {
     this.refreshAllViews();
     this.tamperConsole.init();
 
-    // Setup background database polling (every 5 seconds) to pull transactions/blocks
+    // Setup background database polling (every 5 seconds) to pull new blocks/transactions
     setInterval(async () => {
       try {
-        if (this.explorer && !this.explorer.isMining) {
-          await this.blockchain.loadState();
-          this.refreshAllViews();
-        }
+        // Skip sync if currently mining (avoid conflicts)
+        if (this.explorer && this.explorer.isMining) return;
+        if ((this.blockchain as any)._isMining) return;
+        await this.blockchain.loadState();
+        this.refreshAllViews();
       } catch (err) {
         console.warn('Background Neon DB sync failed:', err);
       }
