@@ -69,7 +69,7 @@ export class Router {
         return;
       }
 
-      if ((hash === '#/tamper' || hash === '#/diagnostics') && userRole !== 'ADMIN') {
+      if ((hash === '#/explorer' || hash === '#/tamper' || hash === '#/diagnostics') && userRole !== 'ADMIN') {
         this.app.showNotification('Access Denied: Administrative privileges required.', 'error');
         this.redirectToRoleHome(userRole);
         return;
@@ -181,6 +181,7 @@ export class Router {
     const navVerifier = document.getElementById('nav-verifier');
     const navTamper = document.getElementById('nav-tamper');
     const navDiagnostics = document.getElementById('nav-diagnostics');
+    const navExplorer = document.getElementById('nav-explorer');
 
     if (navVoter) navVoter.style.display = (isLoggedIn && userRole === 'VOTER') ? 'flex' : 'none';
     if (navCandidate) navCandidate.style.display = (isLoggedIn && userRole === 'CANDIDATE') ? 'flex' : 'none';
@@ -188,6 +189,7 @@ export class Router {
     if (navVerifier) navVerifier.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
     if (navTamper) navTamper.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
     if (navDiagnostics) navDiagnostics.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
+    if (navExplorer) navExplorer.style.display = (isLoggedIn && userRole === 'ADMIN') ? 'flex' : 'none';
   }
 
   navigate(hash: string) {

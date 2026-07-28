@@ -562,16 +562,48 @@ export class LoginRegister {
     try {
       this.btnSubmitReg.disabled = true;
 
-      // 1. Process image locally into Base64 format if a new file is selected
+      // 1. Process image locally or upload to Cloudinary if a new file is selected
       if (this.selectedFile) {
         this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing NIC image...';
         this.progressBarContainer.style.display = 'block';
-        this.progressBarFill.style.width = '30%';
-        this.uploadStatusText.textContent = 'Processing image...';
+        this.progressBarFill.style.width = '20%';
+        
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'votechain';
 
-        this.uploadedImageUrl = await this.readFileAsDataURL(this.selectedFile);
-        this.progressBarFill.style.width = '100%';
-        this.uploadStatusText.textContent = 'Image processed successfully!';
+        if (cloudName) {
+          this.uploadStatusText.textContent = 'Uploading to Cloudinary...';
+          const formData = new FormData();
+          formData.append('file', this.selectedFile);
+          formData.append('upload_preset', uploadPreset);
+
+          this.progressBarFill.style.width = '50%';
+          const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!res.ok) {
+            throw new Error(`Cloudinary responded with status: ${res.status}`);
+          }
+
+          this.progressBarFill.style.width = '80%';
+          const data = await res.json();
+          if (data && data.secure_url) {
+            this.uploadedImageUrl = data.secure_url;
+            this.progressBarFill.style.width = '100%';
+            this.uploadStatusText.textContent = 'Cloudinary upload successful!';
+          } else {
+            throw new Error('Cloudinary response did not contain secure_url.');
+          }
+        } else {
+          // Fallback to offline Base64 data URL
+          this.uploadStatusText.textContent = 'Converting image to Base64...';
+          this.progressBarFill.style.width = '50%';
+          this.uploadedImageUrl = await this.readFileAsDataURL(this.selectedFile);
+          this.progressBarFill.style.width = '100%';
+          this.uploadStatusText.textContent = 'Image processed (Base64 fallback).';
+        }
       }
 
       // 1.5 Save to Neon DB

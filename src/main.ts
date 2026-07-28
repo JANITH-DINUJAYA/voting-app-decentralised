@@ -464,9 +464,9 @@ export class App {
       const applyBtn = item.querySelector('.btn-apply-to-election') as HTMLButtonElement;
       if (applyBtn) {
         applyBtn.addEventListener('click', () => {
-          if (myProfile) {
-            this.applyForCandidacy(address, myProfile.name, myProfile.bio || '', applyBtn);
-          }
+          const candName = myProfile?.name || this.activeUser?.fullName || 'Candidate';
+          const candBio = myProfile?.bio || this.activeUser?.bio || '';
+          this.applyForCandidacy(address, candName, candBio, applyBtn);
         });
       }
 
