@@ -567,69 +567,66 @@ export class LoginRegister {
     try {
       this.btnSubmitReg.disabled = true;
 
-      // 1. Process image locally or upload to Cloudinary if a new file is selected
+      // ── STEP 1: Upload image to ImgBB and get a permanent hosted URL ──
       if (this.selectedFile) {
-        this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing NIC image...';
+        this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading NIC photo...';
         this.progressBarContainer.style.display = 'block';
-        this.progressBarFill.style.width = '20%';
-        
-        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'votechain';
+        this.progressBarFill.style.width = '15%';
+        this.uploadStatusText.textContent = 'Uploading to image host...';
 
-        if (cloudName) {
-          try {
-            this.uploadStatusText.textContent = 'Uploading to Cloudinary...';
-            const formData = new FormData();
-            formData.append('file', this.selectedFile);
-            formData.append('upload_preset', uploadPreset);
+        const imgbbKey = import.meta.env.VITE_IMGBB_API_KEY;
 
-            this.progressBarFill.style.width = '50%';
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-              method: 'POST',
-              body: formData
-            });
-
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              const errMsg = errData.error?.message || `Status Code ${res.status}`;
-              throw new Error(`Cloudinary upload failed: ${errMsg}`);
-            }
-
-            this.progressBarFill.style.width = '80%';
-            const data = await res.json();
-            if (data && data.secure_url) {
-              this.uploadedImageUrl = data.secure_url;
-              this.progressBarFill.style.width = '100%';
-              this.uploadStatusText.textContent = 'Cloudinary upload successful!';
-            } else {
-              throw new Error('Cloudinary response did not contain secure_url.');
-            }
-          } catch (cloudErr: any) {
-            console.warn('Cloudinary upload failed, using Base64 fallback:', cloudErr);
-            this.uploadStatusText.textContent = 'Cloudinary failed. Processing as Base64...';
-            this.progressBarFill.style.width = '60%';
-            this.uploadedImageUrl = await this.readFileAsDataURL(this.selectedFile);
-            this.progressBarFill.style.width = '100%';
-            this.uploadStatusText.textContent = 'Image processed (Base64 fallback).';
-          }
-        } else {
-          // Fallback to offline Base64 data URL
-          this.uploadStatusText.textContent = 'Converting image to Base64...';
-          this.progressBarFill.style.width = '50%';
-          this.uploadedImageUrl = await this.readFileAsDataURL(this.selectedFile);
-          this.progressBarFill.style.width = '100%';
-          this.uploadStatusText.textContent = 'Image processed (Base64 fallback).';
+        if (!imgbbKey) {
+          throw new Error('Image hosting API key (VITE_IMGBB_API_KEY) is not configured. Please add it to your .env file.');
         }
+
+        // Convert file to base64 (ImgBB requires base64 without the data:... prefix)
+        this.progressBarFill.style.width = '30%';
+        const base64Full = await this.readFileAsDataURL(this.selectedFile);
+        const base64Data = base64Full.split(',')[1]; // strip data:image/...;base64, prefix
+
+        this.progressBarFill.style.width = '50%';
+        this.uploadStatusText.textContent = 'Hosting image on ImgBB...';
+
+        const formData = new FormData();
+        formData.append('key', imgbbKey);
+        formData.append('image', base64Data);
+        formData.append('name', `nic_${activeUser.username}_${Date.now()}`);
+
+        const imgbbRes = await fetch('https://api.imgbb.com/1/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        this.progressBarFill.style.width = '80%';
+
+        if (!imgbbRes.ok) {
+          const errData = await imgbbRes.json().catch(() => ({}));
+          throw new Error(`Image upload failed: ${errData?.error?.message || `HTTP ${imgbbRes.status}`}`);
+        }
+
+        const imgbbData = await imgbbRes.json();
+
+        if (!imgbbData?.success || !imgbbData?.data?.url) {
+          throw new Error('Image host did not return a valid URL. Please try again.');
+        }
+
+        // ImgBB returns: data.url (direct), data.display_url, data.thumb.url
+        this.uploadedImageUrl = imgbbData.data.url;
+        this.progressBarFill.style.width = '100%';
+        this.uploadStatusText.textContent = `✓ Image hosted successfully!`;
+        console.log('NIC photo hosted at:', this.uploadedImageUrl);
       }
 
-      // 1.5 Save to Neon DB
+      // ── STEP 2: Save the hosted URL to Neon DB ──
       this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving to Neon Database...';
+
       const dbResponse = await fetch('/api/update-kyc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: activeUser.username,
-          nicPhoto: this.uploadedImageUrl,
+          nicPhoto: this.uploadedImageUrl,  // Store the real hosted URL in DB
           bio: bio || ''
         })
       });
@@ -638,32 +635,26 @@ export class LoginRegister {
         throw new Error(dbData.error || 'Failed to save KYC credentials to database.');
       }
 
-      // Update session details
+      // Update local session
       this.app.activeUser.nicPhoto = this.uploadedImageUrl;
       this.app.activeUser.kycStatus = 'PENDING';
       this.app.activeUser.bio = bio || '';
-
       localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
 
-      // 2. Build Transaction
+      // ── STEP 3: Build & sign the on-chain KYC transaction ──
+      // The hosted URL is short (~50 chars) so safe to embed in the transaction payload
       this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing KYC Registry...';
-      
+
       const w = this.app.wallet;
       const currentNonce = this.app.blockchain.getNonce(w.address);
       const isCandidate = role === 'CANDIDATE';
-      
-      // Store only a short reference on-chain, not the full photo (prevents huge payloads that break block hashes)
-      // The actual photo is safely stored in Neon DB via /api/update-kyc above
-      const nicPhotoRef = this.uploadedImageUrl.startsWith('data:')
-        ? `kyc:db:${w.address.substring(0, 16)}` // Compact placeholder for base64 images
-        : this.uploadedImageUrl; // Use actual Cloudinary URL if available
-      
+
       const payload: any = {
         name,
         email,
-        nicPhoto: nicPhotoRef
+        nicPhoto: this.uploadedImageUrl  // Real hosted URL stored on-chain
       };
-      
+
       if (isCandidate) {
         payload.bio = bio || 'Nominated representative.';
       }
@@ -682,7 +673,7 @@ export class LoginRegister {
       await this.app.blockchain.addTransaction(tx);
 
       this.isEditing = false;
-      this.app.showNotification('KYC application submitted! Queueing block mining...', 'success');
+      this.app.showNotification('KYC application submitted! Photo hosted, saved to database, and registered on-chain.', 'success');
       this.app.refreshAllViews();
 
     } catch (e: any) {
@@ -692,7 +683,8 @@ export class LoginRegister {
       this.uploadStatusText.textContent = 'Upload failed. Try again.';
     } finally {
       this.btnSubmitReg.disabled = false;
-      this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-file-signature"></i> Sign & Submit KYC Registration';
+      this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-file-signature"></i> Sign &amp; Submit KYC Registration';
+
     }
   }
 
