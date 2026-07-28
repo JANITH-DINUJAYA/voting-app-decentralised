@@ -584,7 +584,9 @@ export class LoginRegister {
           });
 
           if (!res.ok) {
-            throw new Error(`Cloudinary responded with status: ${res.status}`);
+            const errData = await res.json().catch(() => ({}));
+            const errMsg = errData.error?.message || `Status Code ${res.status}`;
+            throw new Error(`Cloudinary upload failed: ${errMsg}`);
           }
 
           this.progressBarFill.style.width = '80%';
