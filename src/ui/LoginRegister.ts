@@ -577,31 +577,40 @@ export class LoginRegister {
         const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'votechain';
 
         if (cloudName) {
-          this.uploadStatusText.textContent = 'Uploading to Cloudinary...';
-          const formData = new FormData();
-          formData.append('file', this.selectedFile);
-          formData.append('upload_preset', uploadPreset);
+          try {
+            this.uploadStatusText.textContent = 'Uploading to Cloudinary...';
+            const formData = new FormData();
+            formData.append('file', this.selectedFile);
+            formData.append('upload_preset', uploadPreset);
 
-          this.progressBarFill.style.width = '50%';
-          const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-            method: 'POST',
-            body: formData
-          });
+            this.progressBarFill.style.width = '50%';
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+              method: 'POST',
+              body: formData
+            });
 
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            const errMsg = errData.error?.message || `Status Code ${res.status}`;
-            throw new Error(`Cloudinary upload failed: ${errMsg}`);
-          }
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              const errMsg = errData.error?.message || `Status Code ${res.status}`;
+              throw new Error(`Cloudinary upload failed: ${errMsg}`);
+            }
 
-          this.progressBarFill.style.width = '80%';
-          const data = await res.json();
-          if (data && data.secure_url) {
-            this.uploadedImageUrl = data.secure_url;
+            this.progressBarFill.style.width = '80%';
+            const data = await res.json();
+            if (data && data.secure_url) {
+              this.uploadedImageUrl = data.secure_url;
+              this.progressBarFill.style.width = '100%';
+              this.uploadStatusText.textContent = 'Cloudinary upload successful!';
+            } else {
+              throw new Error('Cloudinary response did not contain secure_url.');
+            }
+          } catch (cloudErr: any) {
+            console.warn('Cloudinary upload failed, using Base64 fallback:', cloudErr);
+            this.uploadStatusText.textContent = 'Cloudinary failed. Processing as Base64...';
+            this.progressBarFill.style.width = '60%';
+            this.uploadedImageUrl = await this.readFileAsDataURL(this.selectedFile);
             this.progressBarFill.style.width = '100%';
-            this.uploadStatusText.textContent = 'Cloudinary upload successful!';
-          } else {
-            throw new Error('Cloudinary response did not contain secure_url.');
+            this.uploadStatusText.textContent = 'Image processed (Base64 fallback).';
           }
         } else {
           // Fallback to offline Base64 data URL

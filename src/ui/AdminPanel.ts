@@ -1,5 +1,6 @@
 import { App } from '../main';
 import { Transaction } from '../blockchain/Transaction';
+import { Wallet } from '../blockchain/Wallet';
 
 export class AdminPanel {
   private app: App;
@@ -220,27 +221,38 @@ export class AdminPanel {
   /**
    * Render deployed elections management panel
    */
-  render() {
-    // 1. Authorization check
-    if (!this.app.wallet) {
-      this.btnDeployCampaign.disabled = true;
-      this.btnDeployCampaign.textContent = 'Wallet Disconnected';
-      this.electionsList.innerHTML = '<p style="color: var(--color-text-muted); text-align: center; padding: 1rem;">Connect admin wallet to manage elections.</p>';
+  async render() {
+    const isAdmin = this.app.activeUser?.role === 'ADMIN';
+
+    if (!isAdmin) {
+      if (this.btnDeployCampaign) {
+        this.btnDeployCampaign.disabled = true;
+        this.btnDeployCampaign.textContent = 'Admin Role Required';
+      }
+      if (this.electionsList) {
+        this.electionsList.innerHTML = '<p style="color: var(--color-danger); text-align: center; padding: 1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Administrative privileges required.</p>';
+      }
       return;
     }
 
-    const isVerifierAdmin = this.app.wallet.address.toLowerCase() === this.app.blockchain.adminAddress.toLowerCase();
-    if (!isVerifierAdmin) {
-      this.btnDeployCampaign.disabled = true;
-      this.btnDeployCampaign.textContent = 'Admin Key Required';
-      this.electionsList.innerHTML = '<p style="color: var(--color-danger); text-align: center; padding: 1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Only the designated verifier admin can view/manage elections.</p>';
-      return;
+    // Auto-restore admin wallet if activeUser is admin but wallet object is null
+    if (!this.app.wallet && this.app.activeUser?.walletPrivateKey && this.app.activeUser?.walletPublicKey) {
+      try {
+        const w = new Wallet();
+        await w.importFromHex(this.app.activeUser.walletPrivateKey, this.app.activeUser.walletPublicKey);
+        this.app.wallet = w;
+      } catch (err) {
+        console.warn('Failed to auto-restore admin wallet in panel:', err);
+      }
     }
 
-    this.btnDeployCampaign.disabled = false;
-    this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-rocket"></i> Deploy Election Smart Contract';
+    if (this.btnDeployCampaign) {
+      this.btnDeployCampaign.disabled = false;
+      this.btnDeployCampaign.innerHTML = '<i class="fa-solid fa-rocket"></i> Deploy Election Smart Contract';
+    }
 
-    // 2. Populate elections list
+    // Populate elections list
+    if (!this.electionsList) return;
     this.electionsList.innerHTML = '';
     const elections = Array.from(this.app.blockchain.contracts.entries());
 
