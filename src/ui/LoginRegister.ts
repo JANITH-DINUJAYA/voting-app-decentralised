@@ -328,7 +328,7 @@ export class LoginRegister {
       }
 
       // Login success
-      this.app.activeUser = {
+       this.app.activeUser = {
         username: 'admin',
         role: 'ADMIN',
         fullName: 'System Administrator',
@@ -337,7 +337,7 @@ export class LoginRegister {
         walletPrivateKey: keyHex,
         walletPublicKey: adminPubKeyHex
       };
-      sessionStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
+      localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
       this.app.wallet = w;
 
       this.adminLoginKeyInput.value = '';
@@ -360,7 +360,7 @@ export class LoginRegister {
 
   private async authenticateSession(profile: UserProfile) {
     this.app.activeUser = profile;
-    sessionStorage.setItem('votechain_session', JSON.stringify(profile));
+    localStorage.setItem('votechain_session', JSON.stringify(profile));
 
     // If wallet already exists in details, load it
     if (profile.walletPrivateKey && profile.walletPublicKey) {
@@ -415,7 +415,7 @@ export class LoginRegister {
     this.app.wallet = null;
     this.isEditing = false;
     this.clearFileSelection();
-    sessionStorage.removeItem('votechain_session');
+    localStorage.removeItem('votechain_session');
     
     this.app.showNotification('Account signed out successfully.', 'info');
     this.app.refreshAllViews();
@@ -458,7 +458,7 @@ export class LoginRegister {
         walletPublicKey: w.publicKeyHex
       };
 
-      sessionStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
+      localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
 
       this.app.showNotification('Wallet generated and linked to Neon database profile!', 'success');
       this.app.refreshAllViews();
@@ -627,7 +627,7 @@ export class LoginRegister {
       this.app.activeUser.kycStatus = 'PENDING';
       this.app.activeUser.bio = bio || '';
 
-      sessionStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
+      localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
 
       // 2. Build Transaction
       this.btnSubmitReg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing KYC Registry...';

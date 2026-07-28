@@ -51,7 +51,7 @@ export class App {
 
   private async restoreSession() {
     try {
-      const stored = sessionStorage.getItem('votechain_session');
+      const stored = localStorage.getItem('votechain_session');
       if (!stored) return;
 
       const user = JSON.parse(stored) as UserProfile;
