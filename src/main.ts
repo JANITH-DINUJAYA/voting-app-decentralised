@@ -57,10 +57,22 @@ export class App {
       const user = JSON.parse(stored) as UserProfile;
       this.activeUser = user;
 
-      if (user && user.walletPrivateKey && user.walletPublicKey) {
+      if (user && user.walletAddress) {
         const w = new Wallet();
-        await w.importFromHex(user.walletPrivateKey, user.walletPublicKey);
-        this.wallet = w;
+        if (user.walletPrivateKey === 'METAMASK_MANAGED') {
+          try {
+            // Auto-reconnect MetaMask provider & contracts in the background
+            await w.connect();
+            this.wallet = w;
+          } catch (connErr) {
+            console.warn('Failed to auto-connect MetaMask on restore:', connErr);
+            w.address = user.walletAddress;
+            this.wallet = w;
+          }
+        } else {
+          await w.importFromHex(user.walletPrivateKey || '', user.walletPublicKey || '');
+          this.wallet = w;
+        }
       }
     } catch (e) {
       console.error('Failed to restore session:', e);
