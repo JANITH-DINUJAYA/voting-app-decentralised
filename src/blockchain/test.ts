@@ -1,7 +1,6 @@
 import { ethers } from 'ethers';
 import { VOTER_REGISTRY_ADDRESS, ELECTION_MANAGER_ADDRESS } from './contract-addresses';
-import VoterRegistryArtifact from '../../artifacts/contracts/VoterRegistry.sol/VoterRegistry.json';
-import ElectionManagerArtifact from '../../artifacts/contracts/ElectionManager.sol/ElectionManager.json';
+import { VOTER_REGISTRY_ABI, ELECTION_MANAGER_ABI } from './abi';
 
 export async function runAutomatedTests(log: (msg: string, type: 'pass' | 'fail' | 'info') => void) {
   log('Starting Automated EVM & Smart Contract Cryptographic Audits...', 'info');
@@ -38,7 +37,7 @@ export async function runAutomatedTests(log: (msg: string, type: 'pass' | 'fail'
     // Test 3: Read Contract Admin State
     // ----------------------------------------------------
     log('Test 3: Reading deployed smart contract state variables (Verifier Admin Address)...', 'info');
-    const registry = new ethers.Contract(VOTER_REGISTRY_ADDRESS, VoterRegistryArtifact.abi, provider);
+    const registry = new ethers.Contract(VOTER_REGISTRY_ADDRESS, VOTER_REGISTRY_ABI, provider);
     const adminAddress = await registry.admin();
     
     if (ethers.isAddress(adminAddress)) {
@@ -58,7 +57,7 @@ export async function runAutomatedTests(log: (msg: string, type: 'pass' | 'fail'
     // Test 5: Query Active Campaigns
     // ----------------------------------------------------
     log('Test 5: Auditing ElectionManager active campaign count...', 'info');
-    const manager = new ethers.Contract(ELECTION_MANAGER_ADDRESS, ElectionManagerArtifact.abi, provider);
+    const manager = new ethers.Contract(ELECTION_MANAGER_ADDRESS, ELECTION_MANAGER_ABI, provider);
     const electionsCount = await manager.getElectionsCount();
     log(`Pass: Successfully queried deployed elections count from ElectionManager contract: ${electionsCount}`, 'pass');
 

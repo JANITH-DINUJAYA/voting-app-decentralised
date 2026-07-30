@@ -1,0 +1,40 @@
+export const VOTER_REGISTRY_ABI = [
+  "function admin() view returns (address)",
+  "function submitKYC(string name, string email, string nicPhoto, string roleStr, string bio) external",
+  "function verifyIdentity(address target, bool approved, string targetRoleStr) external",
+  "function getProfile(address target) view returns (string name, string email, string nicPhoto, string bio, uint8 status, uint8 role)",
+  "function isVerified(address target) view returns (bool)",
+  "function registeredAddresses(uint256 index) view returns (address)",
+  "function getRegisteredAddressesCount() view returns (uint256)",
+  "event KYCSubmitted(address indexed voterAddress, string name, uint8 role)",
+  "event KYCVerified(address indexed voterAddress, uint8 status, uint8 role)"
+];
+
+export const ELECTION_MANAGER_ABI = [
+  "function registry() view returns (address)",
+  "function admin() view returns (address)",
+  "function elections(uint256 index) view returns (uint256 id, string title, string description, uint256 deadline, bool isPrivate, uint8 status)",
+  "function candidateBios(uint256 electionId, string name) view returns (string)",
+  "function candidateApplications(uint256 electionId, address candidate) view returns (address candidateAddress, string name, string bio, bool approved, bool exists)",
+  "function electionApplicantAddresses(uint256 electionId, uint256 index) view returns (address)",
+  "function votes(uint256 electionId, address voter) view returns (string)",
+  "function hasVoted(uint256 electionId, address voter) view returns (bool)",
+  "function tallies(uint256 electionId, string candidate) view returns (uint256)",
+  "function electionWhitelists(uint256 electionId, address voter) view returns (bool)",
+  "function whitelistArrays(uint256 electionId, uint256 index) view returns (address)",
+  "function createElection(string title, string description, string[] initialCandidateNames, string[] initialCandidateBios, uint256 durationMinutes, bool isPrivate, address[] whitelistAddresses) external",
+  "function applyCandidacy(uint256 electionId, string name, string bio) external",
+  "function approveCandidacy(uint256 electionId, address candidate, bool approved) external",
+  "function startElection(uint256 electionId, uint256 durationMinutes) external",
+  "function castVote(uint256 electionId, string candidateName) external",
+  "function getElectionsCount() view returns (uint256)",
+  "function getCandidates(uint256 electionId) view returns (string[])",
+  "function getTallies(uint256 electionId) view returns (string[] names, uint256[] voteCounts)",
+  "function getWhitelist(uint256 electionId) view returns (address[])",
+  "function getApplicants(uint256 electionId) view returns (address[])",
+  "event ElectionCreated(uint256 indexed electionId, string title)",
+  "event CandidacyApplied(uint256 indexed electionId, address indexed candidateAddress, string name)",
+  "event CandidacyApproved(uint256 indexed electionId, address indexed candidateAddress, bool approved)",
+  "event ElectionStarted(uint256 indexed electionId, uint256 deadline)",
+  "event VoteCast(uint256 indexed electionId, address indexed voterAddress, string candidateName, bool isModification)"
+];

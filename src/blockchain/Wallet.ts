@@ -1,6 +1,5 @@
 import { ethers } from 'ethers';
-import VoterRegistryArtifact from '../../artifacts/contracts/VoterRegistry.sol/VoterRegistry.json';
-import ElectionManagerArtifact from '../../artifacts/contracts/ElectionManager.sol/ElectionManager.json';
+import { VOTER_REGISTRY_ABI, ELECTION_MANAGER_ABI } from './abi';
 import { VOTER_REGISTRY_ADDRESS, ELECTION_MANAGER_ADDRESS } from './contract-addresses';
 
 // Helper utilities for Hex translation
@@ -87,13 +86,13 @@ export class Wallet {
     // Initialize contract bindings with signer context
     this.registryContract = new ethers.Contract(
       VOTER_REGISTRY_ADDRESS,
-      VoterRegistryArtifact.abi,
+      VOTER_REGISTRY_ABI,
       this.signer
     );
 
     this.managerContract = new ethers.Contract(
       ELECTION_MANAGER_ADDRESS,
-      ElectionManagerArtifact.abi,
+      ELECTION_MANAGER_ABI,
       this.signer
     );
 

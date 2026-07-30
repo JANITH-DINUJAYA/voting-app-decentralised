@@ -3,8 +3,7 @@ import { Block } from './Block';
 import { Transaction } from './Transaction';
 import { ElectionContract } from './SmartContract';
 import { VOTER_REGISTRY_ADDRESS, ELECTION_MANAGER_ADDRESS } from './contract-addresses';
-import VoterRegistryArtifact from '../../artifacts/contracts/VoterRegistry.sol/VoterRegistry.json';
-import ElectionManagerArtifact from '../../artifacts/contracts/ElectionManager.sol/ElectionManager.json';
+import { VOTER_REGISTRY_ABI, ELECTION_MANAGER_ABI } from './abi';
 import { sha256 } from './Wallet';
 
 export class Blockchain {
@@ -177,8 +176,8 @@ export class Blockchain {
         managerContract = this.app.wallet.managerContract!;
       } else {
         const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
-        registryContract = new ethers.Contract(VOTER_REGISTRY_ADDRESS, VoterRegistryArtifact.abi, provider);
-        managerContract = new ethers.Contract(ELECTION_MANAGER_ADDRESS, ElectionManagerArtifact.abi, provider);
+        registryContract = new ethers.Contract(VOTER_REGISTRY_ADDRESS, VOTER_REGISTRY_ABI, provider);
+        managerContract = new ethers.Contract(ELECTION_MANAGER_ADDRESS, ELECTION_MANAGER_ABI, provider);
       }
 
       // 1. Fetch system verifier admin address
