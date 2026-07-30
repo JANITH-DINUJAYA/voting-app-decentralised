@@ -75,9 +75,13 @@ contract VoterRegistry {
         string memory targetRoleStr
     ) external onlyAdmin {
         Profile storage profile = registry[target];
-        require(profile.status == Status.PENDING, "Voter profile is not in PENDING state");
+        
+        // Track unique addresses registered if this is their first on-chain entry
+        if (profile.status == Status.UNSUBMITTED) {
+            registeredAddresses.push(target);
+        }
 
-        Role finalRole = profile.role;
+        Role finalRole = Role.VOTER;
         if (keccak256(abi.encodePacked(targetRoleStr)) == keccak256(abi.encodePacked("CANDIDATE"))) {
             finalRole = Role.CANDIDATE;
         } else if (keccak256(abi.encodePacked(targetRoleStr)) == keccak256(abi.encodePacked("ADMIN"))) {
