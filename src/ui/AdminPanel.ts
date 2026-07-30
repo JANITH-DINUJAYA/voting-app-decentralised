@@ -110,10 +110,9 @@ export class AdminPanel {
         },
         nonce: currentNonce,
         timestamp: Date.now(),
-        publicKey: wallet.publicKeyHex,
+        publicKey: '0x',
       });
 
-      await tx.signTransaction(wallet);
       await this.app.blockchain.addTransaction(tx);
 
       this.resetForm();
@@ -160,10 +159,9 @@ export class AdminPanel {
         },
         nonce: currentNonce,
         timestamp: Date.now(),
-        publicKey: admin.publicKeyHex
+        publicKey: '0x'
       });
 
-      await tx.signTransaction(admin);
       await this.app.blockchain.addTransaction(tx);
 
       this.app.showNotification(
@@ -203,10 +201,9 @@ export class AdminPanel {
         },
         nonce: currentNonce,
         timestamp: Date.now(),
-        publicKey: admin.publicKeyHex
+        publicKey: '0x'
       });
 
-      await tx.signTransaction(admin);
       await this.app.blockchain.addTransaction(tx);
 
       this.app.showNotification('Election started! It will be mined and opened for voting automatically.', 'success');

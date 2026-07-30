@@ -80,9 +80,9 @@ export class Explorer {
 
       const minedBlock = await this.app.blockchain.minePendingTransactions(
         miner,
-        (currentHash, currentNonce) => {
-          if (this.miningNonce) this.miningNonce.textContent = `Hash Nonce: ${currentNonce}`;
-          if (this.miningHash)  this.miningHash.textContent  = currentHash;
+        (_currentHash: string, _currentNonce: number) => {
+          if (this.miningNonce) this.miningNonce.textContent = `Hash Nonce: ${_currentNonce}`;
+          if (this.miningHash)  this.miningHash.textContent  = _currentHash;
         }
       );
 

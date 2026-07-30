@@ -51,11 +51,8 @@ export class VerifierPortal {
         },
         nonce: currentNonce,
         timestamp: Date.now(),
-        publicKey: admin.publicKeyHex
+        publicKey: '0x'
       });
-
-      // Cryptographically sign with Admin key
-      await tx.signTransaction(admin);
 
       // Broadcast transaction
       await this.app.blockchain.addTransaction(tx);

@@ -107,11 +107,8 @@ export class VoterTerminal {
         payload: { candidateName },
         nonce: currentNonce,
         timestamp: Date.now(),
-        publicKey: wallet.publicKeyHex,
+        publicKey: '0x',
       });
-
-      // Sign transaction
-      await tx.signTransaction(wallet);
 
       // Submit to ledger mempool
       await this.app.blockchain.addTransaction(tx);

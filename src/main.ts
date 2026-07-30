@@ -80,7 +80,8 @@ export class App {
     }
 
     // 0.5 Initialize Blockchain
-    this.blockchain = new Blockchain(this.productionMode);
+    this.blockchain = new Blockchain();
+    this.blockchain.app = this;
 
     // 0.6 Restore session first sequentially
     await this.restoreSession();

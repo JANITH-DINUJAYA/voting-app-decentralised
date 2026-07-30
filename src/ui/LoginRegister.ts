@@ -440,10 +440,10 @@ export class LoginRegister {
     if (!this.app.activeUser) return;
     try {
       this.btnProfileGenerateWallet.disabled = true;
-      this.btnProfileGenerateWallet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Keys...';
+      this.btnProfileGenerateWallet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting MetaMask...';
 
       const w = new Wallet();
-      await w.generate();
+      await w.connect();
       this.app.wallet = w;
 
       const activeUser = this.app.activeUser;
@@ -454,71 +454,47 @@ export class LoginRegister {
         body: JSON.stringify({
           username: activeUser.username,
           walletAddress: w.address,
-          walletPrivateKey: w.privateKeyHex,
-          walletPublicKey: w.publicKeyHex
+          walletPrivateKey: 'METAMASK_MANAGED',
+          walletPublicKey: 'METAMASK_MANAGED'
         })
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to bind keys.');
+        throw new Error(data.error || 'Failed to bind MetaMask wallet.');
       }
 
       this.app.activeUser = {
         ...activeUser,
         walletAddress: w.address,
-        walletPrivateKey: w.privateKeyHex,
-        walletPublicKey: w.publicKeyHex
+        walletPrivateKey: 'METAMASK_MANAGED',
+        walletPublicKey: 'METAMASK_MANAGED'
       };
 
       localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
 
-      this.app.showNotification('Wallet generated and linked to Neon database profile!', 'success');
+      // Sync direct smart contract states
+      await this.app.blockchain.loadState();
+
+      this.app.showNotification('MetaMask Wallet connected and linked to profile!', 'success');
       this.app.refreshAllViews();
     } catch (e: any) {
-      this.app.showNotification(`Key generation failed: ${e.message}`, 'error');
+      this.app.showNotification(`MetaMask connection failed: ${e.message}`, 'error');
     } finally {
       this.btnProfileGenerateWallet.disabled = false;
-      this.btnProfileGenerateWallet.innerHTML = '<i class="fa-solid fa-key"></i> Generate Wallet Key Pair';
+      this.btnProfileGenerateWallet.innerHTML = '<i class="fa-solid fa-wallet"></i> Connect MetaMask Wallet';
     }
   }
 
   private copyAddress() {
     if (!this.app.wallet) return;
     navigator.clipboard.writeText(this.app.wallet.address).then(() => {
-      this.app.showNotification('Derived Wallet Address copied to clipboard!', 'info');
+      this.app.showNotification('Voter Wallet Address copied to clipboard!', 'info');
     });
   }
 
   private async claimFaucetGas() {
-    if (!this.app.wallet) return;
-    try {
-      this.btnLoginClaimFaucet.disabled = true;
-      this.btnLoginClaimFaucet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Requesting Faucet...';
-
-      const w = this.app.wallet;
-      const nonce = this.app.blockchain.getNonce(w.address);
-      const tx = new Transaction({
-        sender: w.address,
-        recipient: '0x0000000000000000000000000000000000000000',
-        type: 'CLAIM_FAUCET',
-        payload: {},
-        nonce,
-        timestamp: Date.now(),
-        publicKey: w.publicKeyHex
-      });
-
-      await tx.signTransaction(w);
-      await this.app.blockchain.addTransaction(tx);
-
-      this.app.showNotification('Faucet request queued in mempool! Go to explorer to mine it.', 'success');
-      this.app.refreshAllViews();
-    } catch (e: any) {
-      this.app.showNotification(`Faucet failed: ${e.message}`, 'error');
-    } finally {
-      this.btnLoginClaimFaucet.disabled = false;
-      this.btnLoginClaimFaucet.innerHTML = '<i class="fa-solid fa-coins"></i> Claim Faucet Tokens (Gas)';
-    }
+    this.app.showNotification('Gas tokens are managed by your Ethereum network. Get free Sepolia ETH from public testnet faucets.', 'info');
   }
 
   // --- KYC SUBMISSION METHODS ---
@@ -674,10 +650,9 @@ export class LoginRegister {
         payload: payload,
         nonce: currentNonce,
         timestamp: Date.now(),
-        publicKey: w.publicKeyHex
+        publicKey: '0x'
       });
 
-      await tx.signTransaction(w);
       await this.app.blockchain.addTransaction(tx);
 
       this.isEditing = false;
@@ -765,8 +740,8 @@ export class LoginRegister {
 
     const w = this.app.wallet!;
     if (this.sessWalletAddress) this.sessWalletAddress.textContent = w.address;
-    if (this.pubkeyHexArea) this.pubkeyHexArea.value = w.publicKeyHex;
-    if (this.privkeyHexArea) this.privkeyHexArea.value = w.privateKeyHex;
+    if (this.pubkeyHexArea) this.pubkeyHexArea.value = 'Managed securely by MetaMask extension';
+    if (this.privkeyHexArea) this.privkeyHexArea.value = 'Private key cannot be read by web applications (Secured by MetaMask)';
 
     // Faucet button
     if (this.btnLoginClaimFaucet) this.btnLoginClaimFaucet.style.display = 'block';

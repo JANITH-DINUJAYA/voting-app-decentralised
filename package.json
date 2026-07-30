@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "hardhat": "^3.11.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0"
+    "@neondatabase/serverless": "^1.1.0",
+    "ethers": "^6.17.0"
   }
 }
