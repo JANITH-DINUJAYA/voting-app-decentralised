@@ -1,13 +1,15 @@
-import hre from "hardhat";
+import { network } from "hardhat";
 
 async function main() {
-  const VoterRegistry = await hre.ethers.getContractFactory("VoterRegistry");
+  const { ethers } = await network.create();
+
+  const VoterRegistry = await ethers.getContractFactory("VoterRegistry");
   const registry = await VoterRegistry.deploy();
   await registry.waitForDeployment();
   const registryAddress = await registry.getAddress();
   console.log("VoterRegistry deployed to:", registryAddress);
 
-  const ElectionManager = await hre.ethers.getContractFactory("ElectionManager");
+  const ElectionManager = await ethers.getContractFactory("ElectionManager");
   const manager = await ElectionManager.deploy(registryAddress);
   await manager.waitForDeployment();
   const managerAddress = await manager.getAddress();
