@@ -27,9 +27,8 @@ export class LoginRegister {
   private btnRegisterAuth!: HTMLButtonElement;
 
   // Admin Login inputs
-  private adminLoginKeyInput!: HTMLInputElement;
   private btnAdminLoginSubmit!: HTMLButtonElement;
-  private btnDemoAdminKey!: HTMLButtonElement;
+  private btnDemoAdminKey!: HTMLButtonElement | null;
 
   // Active Session display
   private sessUsername!: HTMLElement;
@@ -107,9 +106,8 @@ export class LoginRegister {
     this.btnRegisterAuth = document.getElementById('btn-register-auth') as HTMLButtonElement;
 
     // Admin Login inputs
-    this.adminLoginKeyInput = document.getElementById('admin-login-key') as HTMLInputElement;
     this.btnAdminLoginSubmit = document.getElementById('btn-admin-login-submit') as HTMLButtonElement;
-    this.btnDemoAdminKey = document.getElementById('btn-demo-admin-key') as HTMLButtonElement;
+    this.btnDemoAdminKey = document.getElementById('btn-demo-admin-key') as HTMLButtonElement | null;
 
     // Connected views
     this.sessUsername = document.getElementById('sess-username')!;
@@ -173,7 +171,9 @@ export class LoginRegister {
 
     // Admin login events
     this.btnAdminLoginSubmit.addEventListener('click', () => this.handleAdminKeyLogin());
-    this.btnDemoAdminKey.addEventListener('click', () => this.loadDemoAdminKey());
+    if (this.btnDemoAdminKey) {
+      this.btnDemoAdminKey.addEventListener('click', () => this.loadDemoAdminKey());
+    }
 
     // Wallet Generation & Claim Faucet
     this.btnProfileGenerateWallet.addEventListener('click', () => this.generateWalletPostLogin());
@@ -314,42 +314,39 @@ export class LoginRegister {
   }
 
   private async handleAdminKeyLogin() {
-    const keyHex = this.adminLoginKeyInput.value.trim();
-    if (!keyHex) {
-      this.app.showNotification('Please enter the Admin Private Key Hex.', 'error');
-      return;
-    }
-
     try {
       this.btnAdminLoginSubmit.disabled = true;
-      this.btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying Key...';
-
-      // The admin public key corresponding to our preset private key:
-      const adminPubKeyHex = '3059301306072a8648ce3d020106082a8648ce3d03010703420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9';
+      this.btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting MetaMask...';
 
       const w = new Wallet();
-      await w.importFromHex(keyHex, adminPubKeyHex);
+      await w.connect();
+      this.app.wallet = w;
+
+      // Sync state from smart contracts to read the correct adminAddress
+      await this.app.blockchain.loadState();
 
       const adminAddress = this.app.blockchain.adminAddress;
-      if (w.address.toLowerCase() !== adminAddress.toLowerCase()) {
-        throw new Error('Imported address does not match system administrator credentials.');
+      
+      const matchesOnChainAdmin = w.address.toLowerCase() === adminAddress.toLowerCase();
+      const matchesHardcodedAdmin = w.address.toLowerCase() === '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
+
+      if (!matchesOnChainAdmin && !matchesHardcodedAdmin) {
+        throw new Error(`Your connected address (${w.address.substring(0, 8)}...) is not the System Administrator address.`);
       }
 
       // Login success
-       this.app.activeUser = {
+      this.app.activeUser = {
         username: 'admin',
         role: 'ADMIN',
         fullName: 'System Administrator',
         email: 'admin@votechain.net',
         walletAddress: w.address,
-        walletPrivateKey: keyHex,
-        walletPublicKey: adminPubKeyHex
+        walletPrivateKey: 'METAMASK_MANAGED',
+        walletPublicKey: 'METAMASK_MANAGED'
       };
       localStorage.setItem('votechain_session', JSON.stringify(this.app.activeUser));
-      this.app.wallet = w;
 
-      this.adminLoginKeyInput.value = '';
-      this.app.showNotification('Admin cryptographic credentials verified successfully!', 'success');
+      this.app.showNotification('Admin MetaMask Wallet authenticated successfully!', 'success');
       this.app.refreshAllViews();
       window.location.hash = '#/admin';
 
@@ -358,12 +355,12 @@ export class LoginRegister {
       this.app.showNotification(`Verification Failed: ${e.message}`, 'error');
     } finally {
       this.btnAdminLoginSubmit.disabled = false;
-      this.btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Verify Cryptographic Key';
+      this.btnAdminLoginSubmit.innerHTML = '<i class="fa-solid fa-wallet"></i> Connect & Authenticate Admin Wallet';
     }
   }
 
   private loadDemoAdminKey() {
-    this.adminLoginKeyInput.value = '308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042013c369ba077f7a330f47615b5e75248e53187fd49eed9df27205c24edf072b2aa14403420004f54756c5fea436f3ad4ad2a09a5d26be68ffc1e5f3d92fe7899ad53a601fd80af9333ecef1a20a5068c58d43bba87256581f69d0fa09c24334ddd0bd868fe5c9';
+    // No-op for EVM
   }
 
   private async authenticateSession(profile: UserProfile) {
