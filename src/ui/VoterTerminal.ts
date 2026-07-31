@@ -16,6 +16,8 @@ export class VoterTerminal {
   
   private txPayloadBox!: HTMLElement;
   private btnSubmitVote!: HTMLButtonElement;
+  private whitelistDeniedAlert!: HTMLElement;
+  private votingToolsWrapper!: HTMLElement;
 
   constructor(app: App) {
     this.app = app;
@@ -31,6 +33,8 @@ export class VoterTerminal {
     this.existingVoteCandidate = document.getElementById('existing-vote-candidate')!;
     this.txPayloadBox = document.getElementById('vote-tx-payload')!;
     this.btnSubmitVote = document.getElementById('btn-submit-vote') as HTMLButtonElement;
+    this.whitelistDeniedAlert = document.getElementById('voter-whitelist-denied-alert')!;
+    this.votingToolsWrapper = document.getElementById('voter-voting-tools')!;
   }
 
   private initEvents() {
@@ -281,6 +285,8 @@ export class VoterTerminal {
 
     // No campaign selected
     if (!contractAddr) {
+      this.whitelistDeniedAlert.style.display = 'none';
+      this.votingToolsWrapper.style.display = 'flex';
       this.selectedTitle.textContent = 'Select an Election';
       this.radioContainer.innerHTML = '<p style="color: var(--color-text-muted); padding: 0.5rem 0;">Use the dropdown above to select an active election campaign.</p>';
       if (this.existingVoteBox) this.existingVoteBox.style.display = 'none';
@@ -292,6 +298,8 @@ export class VoterTerminal {
     const contract = this.app.blockchain.contracts.get(contractAddr)!;
 
     if (contract.status === 'PRE_REGISTRATION') {
+      this.whitelistDeniedAlert.style.display = 'none';
+      this.votingToolsWrapper.style.display = 'flex';
       this.selectedTitle.textContent = `${contract.title} ⏳ Nominations Phase`;
       if (statusHeader) statusHeader.innerHTML = `
         <div class="alert-box info">
@@ -322,10 +330,16 @@ export class VoterTerminal {
 
     // Check whitelist
     if (contract.isPrivate && !contract.whitelist.has(wallet.address.toLowerCase())) {
-      this.radioContainer.innerHTML = `<div class="alert-box danger"><i class="fa-solid fa-lock"></i><div><strong>Access Restricted</strong><p style="font-size:0.82rem;">Your address is not whitelisted for this election.</p></div></div>`;
+      this.whitelistDeniedAlert.innerHTML = `<div class="alert-box danger"><i class="fa-solid fa-lock"></i><div><strong>Access Restricted</strong><p style="font-size:0.82rem;">Your address is not whitelisted for this election.</p></div></div>`;
+      this.whitelistDeniedAlert.style.display = 'block';
+      this.votingToolsWrapper.style.display = 'none';
       if (this.btnSubmitVote) { this.btnSubmitVote.disabled = true; this.btnSubmitVote.textContent = 'Not Whitelisted'; }
       return;
     }
+
+    // Whitelisted: show voting tools, hide alert
+    this.whitelistDeniedAlert.style.display = 'none';
+    this.votingToolsWrapper.style.display = 'flex';
 
     // Deadline check
     if (this.btnSubmitVote) {

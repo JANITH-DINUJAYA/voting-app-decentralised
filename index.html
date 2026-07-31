@@ -294,51 +294,57 @@
               <div id="voter-kyc-gate" style="display: none;"></div>
 
               <div id="voter-voting-section" style="display: none; flex-direction: column; gap: 1.5rem;">
-                <!-- Step 1 -->
-                <div>
-                  <div class="vote-step-header">
-                    <div class="vote-step-num">1</div>
-                    <div>
-                      <div class="vote-step-title">Select Your Candidate</div>
-                      <div class="vote-step-subtitle">Review manifestos and make your choice. You may change your vote any time before the deadline.</div>
-                    </div>
-                  </div>
-                  <div id="vote-candidate-radio-container" class="candidate-choice-grid" style="margin-top: 0.75rem;"></div>
-                </div>
+                <!-- Whitelist Denied Alert (shown if voter not whitelisted) -->
+                <div id="voter-whitelist-denied-alert" style="display: none;"></div>
 
-                <!-- Your current vote (if changed) -->
-                <div id="existing-vote-box" style="display: none;" class="current-vote-indicator">
+                <!-- Voting tools wrapper (hidden if whitelist denied) -->
+                <div id="voter-voting-tools" style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                  <!-- Step 1 -->
                   <div>
-                    <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Your Recorded On-Chain Vote</div>
-                    <strong id="existing-vote-candidate" style="color: var(--color-secondary); font-size: 1rem;"></strong>
-                  </div>
-                  <span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> On-Chain</span>
-                </div>
-
-                <!-- Step 2 -->
-                <div>
-                  <div class="vote-step-header">
-                    <div class="vote-step-num">2</div>
-                    <div>
-                      <div class="vote-step-title">Transaction Preview</div>
-                      <div class="vote-step-subtitle">Your ballot will be cryptographically signed with your private key and broadcast to the network.</div>
+                    <div class="vote-step-header">
+                      <div class="vote-step-num">1</div>
+                      <div>
+                        <div class="vote-step-title">Select Your Candidate</div>
+                        <div class="vote-step-subtitle">Review manifestos and make your choice. You may change your vote any time before the deadline.</div>
+                      </div>
                     </div>
+                    <div id="vote-candidate-radio-container" class="candidate-choice-grid" style="margin-top: 0.75rem;"></div>
                   </div>
-                  <div class="tx-payload-box" id="vote-tx-payload" style="margin-top: 0.75rem;">Select a candidate above to preview your ballot transaction...</div>
-                </div>
 
-                <!-- Step 3: Sign & Submit -->
-                <div>
-                  <div class="vote-step-header">
-                    <div class="vote-step-num">3</div>
+                  <!-- Your current vote (if changed) -->
+                  <div id="existing-vote-box" style="display: none;" class="current-vote-indicator">
                     <div>
-                      <div class="vote-step-title">Sign &amp; Cast Ballot</div>
-                      <div class="vote-step-subtitle">Your private key signs the transaction locally. The key never leaves your browser.</div>
+                      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Your Recorded On-Chain Vote</div>
+                      <strong id="existing-vote-candidate" style="color: var(--color-secondary); font-size: 1rem;"></strong>
                     </div>
+                    <span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> On-Chain</span>
                   </div>
-                  <button id="btn-submit-vote" class="btn" style="margin-top: 0.75rem; width: 100%;" disabled>
-                    <i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign &amp; Cast Vote
-                  </button>
+
+                  <!-- Step 2 -->
+                  <div>
+                    <div class="vote-step-header">
+                      <div class="vote-step-num">2</div>
+                      <div>
+                        <div class="vote-step-title">Transaction Preview</div>
+                        <div class="vote-step-subtitle">Your ballot will be cryptographically signed with your private key and broadcast to the network.</div>
+                      </div>
+                    </div>
+                    <div class="tx-payload-box" id="vote-tx-payload" style="margin-top: 0.75rem;">Select a candidate above to preview your ballot transaction...</div>
+                  </div>
+
+                  <!-- Step 3: Sign & Submit -->
+                  <div>
+                    <div class="vote-step-header">
+                      <div class="vote-step-num">3</div>
+                      <div>
+                        <div class="vote-step-title">Sign &amp; Cast Ballot</div>
+                        <div class="vote-step-subtitle">Your private key signs the transaction locally. The key never leaves your browser.</div>
+                      </div>
+                    </div>
+                    <button id="btn-submit-vote" class="btn" style="margin-top: 0.75rem; width: 100%;" disabled>
+                      <i class="fa-solid fa-pen-fancy"></i> Cryptographically Sign &amp; Cast Vote
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
