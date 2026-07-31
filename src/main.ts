@@ -724,11 +724,16 @@ export class App {
     const txCountEl = document.getElementById('stat-transactions');
     const campaignCountEl = document.getElementById('stat-campaigns');
 
-    let totalTxs = 0;
-    this.blockchain.chain.forEach(block => { totalTxs += block.transactions.length; });
+    const blocksCount = this.blockchain.evmBlockHeight > 0 
+      ? this.blockchain.evmBlockHeight 
+      : this.blockchain.chain.length;
 
-    if (blockCountEl) blockCountEl.textContent = this.blockchain.chain.length.toString();
-    if (txCountEl) txCountEl.textContent = totalTxs.toString();
+    const txCount = this.blockchain.evmTotalTxs > 0
+      ? this.blockchain.evmTotalTxs
+      : (this.blockchain.contracts.size * 2); // Approximation fallback
+
+    if (blockCountEl) blockCountEl.textContent = blocksCount.toString();
+    if (txCountEl) txCountEl.textContent = txCount.toString();
     if (campaignCountEl) campaignCountEl.textContent = this.blockchain.contracts.size.toString();
 
     // Also update admin dashboard stat cards if visible

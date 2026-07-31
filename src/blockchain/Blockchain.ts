@@ -16,6 +16,8 @@ export class Blockchain {
   public nonces: Map<string, number> = new Map();
   public verifiedAddresses: Set<string> = new Set();
   public adminAddress: string = '';
+  public evmBlockHeight: number = 0;
+  public evmTotalTxs: number = 0;
   public voterRegistry: Map<string, {
     name: string;
     email: string;
@@ -298,6 +300,25 @@ export class Blockchain {
         );
         mockBlock.hash = '0x' + (await sha256(mockBlock.index.toString() + mockBlock.previousHash)).slice(-40);
         this.chain.push(mockBlock);
+      }
+
+      // Fetch actual EVM network statistics
+      try {
+        const statsProvider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+        const blockNumber = await statsProvider.getBlockNumber();
+        this.evmBlockHeight = blockNumber;
+        
+        let txCount = 0;
+        const startBlock = Math.max(0, blockNumber - 50);
+        for (let b = startBlock; b <= blockNumber; b++) {
+          const blockInfo = await statsProvider.getBlock(b);
+          if (blockInfo) {
+            txCount += blockInfo.transactions.length;
+          }
+        }
+        this.evmTotalTxs = txCount;
+      } catch (statsErr) {
+        console.warn('Failed to query EVM stats:', statsErr);
       }
 
     } catch (err) {
