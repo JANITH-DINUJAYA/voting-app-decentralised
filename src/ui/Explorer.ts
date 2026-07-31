@@ -187,6 +187,10 @@ export class Explorer {
           txTitle   = 'Whitelist Voter Address';
           iconClass = 'fa-solid fa-list-check';
           break;
+        default:
+          txTitle   = 'EVM Contract Interaction';
+          iconClass = 'fa-solid fa-cube';
+          break;
       }
 
       item.innerHTML = `

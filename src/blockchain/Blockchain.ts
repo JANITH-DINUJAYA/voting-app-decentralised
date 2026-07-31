@@ -290,16 +290,88 @@ export class Blockchain {
         this.contracts.set(mockAddr.toLowerCase(), newContract);
       }
 
-      // Reconstruct mock blocks for the Explorer UI
-      this.chain = [this.createGenesisBlock()];
-      for (let i = 0; i < Number(electionsCount); i++) {
-        const mockBlock = new Block(
-          i + 1,
-          [],
-          this.chain[i].hash
-        );
-        mockBlock.hash = '0x' + (await sha256(mockBlock.index.toString() + mockBlock.previousHash)).slice(-40);
-        this.chain.push(mockBlock);
+      // Reconstruct actual blocks from the EVM provider for the Explorer UI
+      try {
+        const statsProvider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+        const blockNumber = await statsProvider.getBlockNumber();
+        
+        this.chain = [];
+        for (let i = 0; i <= blockNumber; i++) {
+          const blockInfo = await statsProvider.getBlock(i, true);
+          if (blockInfo) {
+            const txs: Transaction[] = [];
+            
+            for (const txOrHash of blockInfo.transactions) {
+              if (typeof txOrHash !== 'string') {
+                const evmTx = txOrHash as any;
+                const input = evmTx.data || '0x';
+                const selector = input.slice(0, 10).toLowerCase();
+                
+                let txType = 'EVM_TRANSACTION';
+                let payload: any = {};
+                
+                if (!evmTx.to || evmTx.to === ethers.ZeroAddress) {
+                  txType = 'DEPLOY_ELECTION';
+                  payload = { title: 'Deploy System Smart Contract' };
+                } else if (selector === '0x7f9ec2f0') {
+                  txType = 'DEPLOY_ELECTION';
+                  payload = { title: 'Create Governance Election' };
+                } else if (selector === '0xa9fabbd2') {
+                  txType = 'REGISTER_VOTER_KYC';
+                  payload = { name: 'User Profile KYC Submission' };
+                } else if (selector === '0xeba08a64') {
+                  txType = 'VERIFY_IDENTITY';
+                  payload = { approved: true, targetAddress: evmTx.from };
+                } else if (selector === '0x3109cf2f') {
+                  txType = 'APPLY_CANDIDACY';
+                  payload = { name: 'Nomination Candidate Application' };
+                } else if (selector === '0x094fbfc5') {
+                  txType = 'APPROVE_CANDIDACY';
+                  payload = { approved: true, candidateAddress: evmTx.from };
+                } else if (selector === '0x0c54b463') {
+                  txType = 'START_ELECTION';
+                } else if (selector === '0xd037853a') {
+                  txType = 'CAST_VOTE';
+                  payload = { candidateName: 'Cast Ballot Selection' };
+                }
+                
+                txs.push(new Transaction({
+                  sender: evmTx.from,
+                  recipient: evmTx.to || '0x0000000000000000000000000000000000000000',
+                  type: txType as any,
+                  payload: payload,
+                  nonce: evmTx.nonce,
+                  timestamp: blockInfo.timestamp * 1000,
+                  publicKey: '0x'
+                }));
+              } else {
+                txs.push(new Transaction({
+                  sender: '0x',
+                  recipient: '0x',
+                  type: 'EVM_TRANSACTION' as any,
+                  payload: { hash: txOrHash, value: '0' },
+                  nonce: 0,
+                  timestamp: blockInfo.timestamp * 1000,
+                  publicKey: '0x'
+                }));
+              }
+            }
+            
+            const localBlock = new Block(
+              i,
+              txs,
+              blockInfo.parentHash || '0000000000000000000000000000000000000000000000000000000000000000'
+            );
+            localBlock.hash = blockInfo.hash || '0x';
+            localBlock.timestamp = blockInfo.timestamp * 1000;
+            localBlock.nonce = Number(blockInfo.nonce || 0);
+            
+            this.chain.push(localBlock);
+          }
+        }
+      } catch (blockErr) {
+        console.warn('Failed to rebuild chain from EVM blocks:', blockErr);
+        this.chain = [this.createGenesisBlock()];
       }
 
       // Fetch actual EVM network statistics
