@@ -14,6 +14,16 @@ export default async function handler(req, res) {
   try {
     await initializeDatabase();
 
+    // Check if another user is already using this wallet address
+    const existing = await sql`
+      SELECT username FROM users 
+      WHERE wallet_address = ${walletAddress} AND LOWER(username) != ${username.toLowerCase()}
+    `;
+
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'This blockchain address is already linked to another user profile.' });
+    }
+
     await sql`
       UPDATE users 
       SET 
