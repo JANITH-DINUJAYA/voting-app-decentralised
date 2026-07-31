@@ -368,13 +368,25 @@ export class LoginRegister {
     localStorage.setItem('votechain_session', JSON.stringify(profile));
 
     // If wallet already exists in details, load it
-    if (profile.walletPrivateKey && profile.walletPublicKey) {
+    if (profile.walletAddress) {
       const w = new Wallet();
-      await w.importFromHex(profile.walletPrivateKey, profile.walletPublicKey);
-      this.app.wallet = w;
+      if (profile.walletPrivateKey === 'METAMASK_MANAGED') {
+        try {
+          // Auto-reconnect MetaMask provider & contracts in the background on sign-in
+          await w.connect();
+          this.app.wallet = w;
+        } catch (connErr) {
+          console.warn('Failed to auto-connect MetaMask on sign-in:', connErr);
+          w.address = profile.walletAddress;
+          this.app.wallet = w;
+        }
+      } else {
+        await w.importFromHex(profile.walletPrivateKey || '', profile.walletPublicKey || '');
+        this.app.wallet = w;
+      }
 
       // Sync database profile KYC status back to blockchain if missing on-chain
-      if (profile.walletAddress && profile.kycStatus && profile.kycStatus !== 'UNSUBMITTED') {
+      if (profile.kycStatus && profile.kycStatus !== 'UNSUBMITTED') {
         const addr = profile.walletAddress.toLowerCase();
         const onChainProfile = this.app.blockchain.voterRegistry.get(addr);
         if (!onChainProfile) {
