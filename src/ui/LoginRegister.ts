@@ -453,7 +453,6 @@ export class LoginRegister {
 
       const w = new Wallet();
       await w.connect();
-      this.app.wallet = w;
 
       const activeUser = this.app.activeUser;
       
@@ -472,6 +471,9 @@ export class LoginRegister {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to bind MetaMask wallet.');
       }
+
+      // Only bind wallet and update session once server-side uniqueness check passes
+      this.app.wallet = w;
 
       this.app.activeUser = {
         ...activeUser,
